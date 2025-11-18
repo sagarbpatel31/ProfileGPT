@@ -8,7 +8,11 @@
       "Bash(pip install:*)",
       "Bash(curl:*)",
       "Bash(lsof:*)",
-      "Bash(xargs kill:*)"
+      "Bash(xargs kill:*)",
+      "Bash(git push:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "WebFetch(domain:dashing-torrone-daca26.netlify.app)"
     ],
     "deny": [],
     "ask": []
