@@ -899,7 +899,8 @@ class RAGEngine:
                 if re.search(pattern, question_lower):
                     return skill_map[skill_key]
             else:
-                if normalized in tokens:
+                pattern = r"(?<!\w){}(?!\w)".format(re.escape(normalized))
+                if normalized in tokens and re.search(pattern, question_lower):
                     return skill_map[skill_key]
 
         return None
