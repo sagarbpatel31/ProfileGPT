@@ -12,7 +12,8 @@
       "Bash(git push:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "WebFetch(domain:dashing-torrone-daca26.netlify.app)"
+      "WebFetch(domain:dashing-torrone-daca26.netlify.app)",
+      "Read(//Users/sagarpatel/Desktop/**)"
     ],
     "deny": [],
     "ask": []
