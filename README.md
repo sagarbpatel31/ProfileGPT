@@ -1,6 +1,6 @@
 # 🚀 ProfileGPT - AI-Powered Professional Portfolio
 
-**ProfileGPT** is a complete **AI-powered professional portfolio system** that lets visitors chat with your background and experience using **Retrieval-Augmented Generation (RAG)**. It provides intelligent, cited answers from your resume, portfolio, and documents.
+**PProfileGPT** is a complete **AI-powered professional portfolio system** that lets visitors chat with your professional background and experience using **Retrieval-Augmented Generation (RAG)**. It provides intelligent, cited answers from your resume, portfolio, and documents.
 
 ## ✨ **What Makes ProfileGPT Special**
 
