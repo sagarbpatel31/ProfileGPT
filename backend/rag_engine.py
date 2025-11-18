@@ -124,6 +124,12 @@ class MockLLM:
             for summary in summaries[:limit]
         ]
 
+    def _format_short_points(self, points: List[str], fallback: str, limit: int = 2) -> str:
+        cleaned = [p.replace("•", "").strip(" -:") for p in points if p.strip()]
+        if cleaned:
+            return "; ".join(cleaned[:limit])
+        return fallback
+
     def _summaries_from_chunks(self, question: str, chunks: List[Dict[str, Any]], limit: int = 8) -> List[Dict[str, str]]:
         """Grab relevant sentences from context matching keywords"""
         keywords = [word for word in re.sub(r"[^\w\s]", "", question.lower()).split() if len(word) > 2]
@@ -208,71 +214,83 @@ class MockLLM:
 
     def _analyze_python_skills(self, summaries: List[Dict[str, str]], question: str, mode: str) -> str:
         """Analyze Python skills from resume context"""
-        points = self._extract_context_points(summaries, limit=4)
+        raw_points = self._extract_context_points(summaries, limit=4)
+        if not raw_points:
+            raw_points = [
+                "Automates hardware validation and health checks via Python scripting.",
+                "Builds firmware-to-cloud telemetry services and diagnostics pipelines.",
+                "Uses PyTorch, Pandas, and NumPy for ML research prototypes."
+            ]
 
         if mode == "short":
-            return "Python is my daily driver for automation, backend services, and ML prototypes."
+            return self._format_short_points(raw_points, "Python covers automation, telemetry, and ML prototyping.")
         elif mode == "star":
             return ("Situation: Needed faster quality feedback during Cisco board bring-up\n"
                     "Task: Reduce manual QA cycles and capture telemetry data\n"
                     "Action: Built Python pipelines that triggered tests, parsed logs, and published dashboards\n"
                     "Result: Enabled daily CI-style validation and freed the hardware team from manual testing")
 
-        bullet_points = "\n".join([f"• {point}" for point in points])
-        return ("Here is how I apply Python:\n"
+        bullet_points = "\n".join([f"• {point}" for point in raw_points])
+        return ("Here’s how I apply Python:\n"
                 f"{bullet_points}\n"
                 "• Tooling: PyTorch, FastAPI, Pandas, NumPy, automation frameworks")
 
     def _analyze_experience(self, summaries: List[Dict[str, str]], question: str, mode: str) -> str:
         """Analyze work experience from context"""
-        points = self._extract_context_points(summaries, limit=4)
+        raw_points = self._extract_context_points(summaries, limit=4)
 
-        if not points:
-            points = [
+        if not raw_points:
+            raw_points = [
                 "Led embedded switch bring-up at Cisco, covering FPGA, PoE, and security modules.",
                 "Built firmware-to-cloud data paths for R-Tek IoT devices (Raspberry Pi, STM32, ESP32).",
                 "Collaborated on AI research projects translating ML outputs into production-ready tooling."
             ]
 
         if mode == "short":
-            return "Embedded engineer with Cisco + R-Tek experience blending firmware, automation, and AI research."
+            return self._format_short_points(raw_points, "Embedded engineer blending Cisco hardware + IoT cloud work.")
         elif mode == "star":
             return ("Situation: Owned validation for Cisco's next-gen enterprise switch platform\n"
                     "Task: Ensure every board feature (PHY/FPGA/PoE) worked before release\n"
                     "Action: Built diagnostic CLI tools, automated tests, and coordinated across silicon teams\n"
                     "Result: Accelerated bring-up cycles and improved release confidence for the hardware org")
 
-        bullet_points = "\n".join([f"• {point}" for point in points])
+        bullet_points = "\n".join([f"• {point}" for point in raw_points])
         return ("Experience snapshot:\n"
                 f"{bullet_points}\n"
                 "• Collaboration: cross-functional work with hardware, cloud, and research teams")
 
     def _analyze_technical_skills(self, summaries: List[Dict[str, str]], question: str, mode: str) -> str:
         """Analyze technical skills from context"""
+        raw_points = self._extract_context_points(summaries, limit=5)
+
+        fallback_points = [
+            "Programming: Python, C/C++, Bash, ROS nodes, automation scripting.",
+            "Embedded platforms: Raspberry Pi, STM32, ESP32, Nvidia Jetson, I2C/SPI/UART.",
+            "AI/ML: PyTorch, computer vision (UNet/ResAttUNet), Pandas/Numpy for data.",
+            "Cloud & DevOps: FastAPI services, Docker, CI/CD pipelines, observability.",
+            "Operating Systems: Linux bring-up, device drivers, low-level debugging."
+        ]
+
+        if not raw_points or raw_points == ["•"]:
+            raw_points = fallback_points
+
         if mode == "short":
-            return "Blend of C/C++, Python, embedded Linux, cloud integrations, and AI/ML tooling."
+            return self._format_short_points(raw_points, "Daily stack spans Python/C++, embedded Linux, and ML tooling.")
         elif mode == "star":
             return ("Situation: Teams needed one engineer who could span firmware to AI\n"
                     "Task: Deliver end-to-end solutions without handoffs between specialists\n"
                     "Action: Became fluent in C/C++, Python, ROS, cloud services, and ML frameworks\n"
                     "Result: Delivered projects like autonomous drones and IoT telemetry pipelines independently")
 
-        bullet_points = "\n".join([f"• {point}" for point in self._extract_context_points(summaries, limit=4)])
-        if bullet_points.strip() == "•":
-            bullet_points = ("• Programming: Python, C/C++, Bash, ROS nodes, automation scripting\n"
-                             "• Embedded: Raspberry Pi, STM32, ESP32, Nvidia Jetson, I2C/SPI/UART integrations\n"
-                             "• AI/ML: PyTorch, computer vision (UNet, ResAttUNet), data prep with Pandas/NumPy\n"
-                             "• Cloud & DevOps: API design with FastAPI, Dockerized services, CI/CD pipelines, observability dashboards\n"
-                             "• Operating Systems: Linux bring-up, device drivers, low-level debugging with GDB/JTAG")
-
+        bullet_points = "\n".join([f"• {point}" for point in raw_points])
         return ("Technical strengths:\n"
                 f"{bullet_points}")
 
     def _analyze_projects(self, summaries: List[Dict[str, str]], question: str, mode: str) -> str:
         """Analyze projects from context"""
-        points = self._extract_context_points(summaries, limit=4)
-        if not points:
-            points = [
+        raw_points = self._extract_context_points(summaries, limit=4)
+        if not raw_points:
+            raw_points = [
                 "Autonomous drone platform with GPS-less navigation using Jetson Nano + SLAM.",
                 "Marine plastic detection model (ResAttUNet) delivering >80 IoU on satellite imagery.",
                 "Enterprise switch validation tooling (C/C++ CLI + automation) at Cisco.",
@@ -280,14 +298,14 @@ class MockLLM:
             ]
 
         if mode == "short":
-            return "Delivered drones, ML research, and IoT telemetry platforms that link firmware to cloud analytics."
+            return self._format_short_points(raw_points, "Delivered drones, ML research, and IoT telemetry projects.")
         elif mode == "star":
             return ("Situation: Needed autonomous inspection without GPS indoors\n"
                     "Task: Build a fully autonomous drone platform\n"
                     "Action: Implemented SLAM, visual odometry, and ROS navigation nodes across Jetson + T265 sensors\n"
                     "Result: Drone executes missions via UI commands and avoids obstacles in real time")
 
-        bullet_points = "\n".join([f"• {point}" for point in points[:4]])
+        bullet_points = "\n".join([f"• {point}" for point in raw_points[:4]])
         return ("Representative projects:\n"
                 f"{bullet_points}\n"
                 "Each project blends embedded hardware, AI models, and production-ready automation.")
@@ -312,9 +330,15 @@ class MockLLM:
 
     def _analyze_embedded_experience(self, summaries: List[Dict[str, str]], question: str, mode: str) -> str:
         """Analyze embedded systems experience"""
-        points = self._extract_context_points(summaries, limit=4)
         if mode == "short":
-            return "2+ years at Cisco with embedded systems, firmware, and hardware validation expertise."
+            raw_points = self._extract_context_points(summaries, limit=4)
+            if not raw_points:
+                raw_points = [
+                    "Cisco board bring-up (PHY/FPGA/PoE diagnostics).",
+                    "Firmware + RTOS tasks in C/C++ for telemetry.",
+                    "IoT integrations across Raspberry Pi, STM32, ESP32."
+                ]
+            return self._format_short_points(raw_points, "Embedded engineer with Cisco validation + RTOS experience.")
         elif mode == "star":
             return "Situation: Cisco needed next-gen switch validation\nTask: Lead board bring-up for complex hardware\nAction: Developed C/C++ tools, automated testing, coordinated with multiple teams\nResult: Achieved high validation rates and streamlined development process"
 
@@ -364,7 +388,7 @@ class MockLLM:
             ]
 
         if mode == "short":
-            return "AI/ML focus on computer vision, SLAM robotics, and ML-backed telemetry pipelines."
+            return self._format_short_points(points, "AI/ML work spans computer vision, SLAM robotics, and telemetry ML.")
         elif mode == "star":
             return ("Situation: Environmental partners needed satellite-based plastic detection\n"
                     "Task: Build a high-precision segmentation model\n"
@@ -380,7 +404,7 @@ class MockLLM:
         """Highlight healthcare/data-science experience"""
         points = self._extract_context_points(summaries, limit=4)
         if mode == "short":
-            return "Healthcare data scientist building ICU readmission + sepsis detection models with clinicians."
+            return self._format_short_points(points, "Healthcare DS building ICU readmission & sepsis models with clinicians.")
         elif mode == "star":
             return ("Situation: ICU teams struggled with late readmission alerts\n"
                     "Task: Deliver a predictive model clinicians could trust\n"
@@ -403,7 +427,7 @@ class MockLLM:
             ]
 
         if mode == "short":
-            return "Blend of embedded engineering, AI/ML research, and IoT/cloud integration experience."
+            return self._format_short_points(points, "Embedded engineer with AI research and IoT/cloud integration experience.")
         elif mode == "star":
             return ("Situation: Career spans embedded hardware and AI projects\n"
                     "Task: Provide reliable technical guidance across both domains\n"
@@ -864,10 +888,19 @@ class RAGEngine:
         skill_map = {name.lower(): name for name in self.db.get_tenant_skill_names(tenant_id)}
         for key, value in KNOWN_SKILLS.items():
             skill_map.setdefault(key, value)
+        tokens = set(re.findall(r"[a-z0-9\+\#\.]+", question_lower))
 
         for skill_key in sorted(skill_map.keys(), key=len, reverse=True):
-            if skill_key and skill_key in question_lower:
-                return skill_map[skill_key]
+            if not skill_key:
+                continue
+            normalized = skill_key.lower()
+            if any(ch in normalized for ch in "+.#"):
+                pattern = r"(?<!\w){}(?!\w)".format(re.escape(normalized))
+                if re.search(pattern, question_lower):
+                    return skill_map[skill_key]
+            else:
+                if normalized in tokens:
+                    return skill_map[skill_key]
 
         return None
 
