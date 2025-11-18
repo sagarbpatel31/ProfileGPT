@@ -9,6 +9,12 @@ Your ProfileGPT is now successfully deployed and ready to use!
 - **Backend (PythonAnywhere)**: `https://sagarbpatel31.pythonanywhere.com` ✅ LIVE
 - **API Health**: https://sagarbpatel31.pythonanywhere.com/ ✅ RESPONDING
 
+### **Infrastructure Overview**
+- **Frontend hosting**: Vercel (Next.js, CDN, HTTPS, auto-builds)
+- **Backend hosting**: PythonAnywhere (FastAPI + SQLite) with optional upgrade to Supabase/Postgres (`backend/app` ready)
+- **RAG pipeline**: Custom chunking + mock LLM/embeddings (swap in OpenAI or local sentence-transformers when needed)
+- **Widget delivery**: `frontend/public/widget.js` served from Vercel
+
 ---
 
 ## 🔧 **IMMEDIATE NEXT STEPS**

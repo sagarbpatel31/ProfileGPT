@@ -68,6 +68,12 @@ class URLIngestRequest(BaseModel):
     title: Optional[str] = None
     tenant_id: Optional[str] = "demo-tenant"
 
+class TextIngestRequest(BaseModel):
+    tenant_id: Optional[str] = "demo-tenant"
+    source_type: str = "note"
+    title: str
+    content: str
+
 # Root endpoint
 @app.get("/")
 async def root():
@@ -190,6 +196,35 @@ async def ingest_url(request: URLIngestRequest):
             job_id=str(uuid.uuid4()),
             status="failed",
             message=f"Error processing URL: {str(e)}"
+        )
+
+@app.post("/ingest/text", response_model=IngestResponse)
+async def ingest_text_document(request: TextIngestRequest):
+    """
+    Ingest raw text without uploading files (used for regression tests/automation)
+    """
+    try:
+        doc_id = rag_engine.ingest_document(
+            tenant_id=request.tenant_id or "demo-tenant",
+            source_type=request.source_type,
+            title=request.title,
+            content=request.content,
+            url=None
+        )
+
+        chunks_created = max(1, len(request.content.split()) // 600)
+
+        return IngestResponse(
+            job_id=doc_id,
+            status="completed",
+            message=f"Document '{request.title}' ingested successfully",
+            chunks_created=chunks_created
+        )
+    except Exception as e:
+        return IngestResponse(
+            job_id=str(uuid.uuid4()),
+            status="failed",
+            message=f"Error processing text document: {str(e)}"
         )
 
 # Get supported platforms

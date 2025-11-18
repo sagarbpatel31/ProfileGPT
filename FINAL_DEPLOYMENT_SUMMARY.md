@@ -75,6 +75,13 @@ Your frontend should connect automatically to: `https://sagarbpatel31.pythonanyw
 User → Vercel (Next.js Frontend) → PythonAnywhere (FastAPI Backend) → SQLite Database
 ```
 
+### **Infrastructure & Services Used**
+- **Frontend hosting**: Vercel (Next.js, global CDN, HTTPS, preview deployments)
+- **Backend hosting**: PythonAnywhere (Uvicorn + FastAPI, scheduled jobs, logging)
+- **Data layer**: SQLite for personal deployments with optional upgrade path to Supabase/Postgres (`backend/app`)
+- **RAG stack**: Custom chunker, mock embeddings/LLM by default, plug-in ready for OpenAI/Cohere/local models
+- **Build/Deploy tooling**: Vercel CLI + GitHub; regression harness will seed tenants and hit `/ask`, `/skills`, `/ingest`
+
 ### **Features Working**
 - ✅ **Q&A Chat**: Natural language questions about your profile
 - ✅ **Skills Lookup**: Fast verification of technical abilities

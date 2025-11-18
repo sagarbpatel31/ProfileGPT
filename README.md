@@ -59,6 +59,13 @@ Confidence: 94%"
                         └──────────────────┘
 ```
 
+### **Infrastructure & Services**
+- **Backend API:** FastAPI app hosted on PythonAnywhere (or any VPS) with Uvicorn.
+- **Data Storage:** SQLite for free/local operation; optional Supabase/Postgres + pgvector ready in `backend/app`.
+- **RAG Components:** Custom chunker + mock embeddings/LLM by default; can swap to OpenAI, Cohere, or local `sentence-transformers`.
+- **Frontend:** Next.js (App Router) deployed on Vercel; widget script served from `frontend/public/widget.js`.
+- **CI/Automation:** Manual deploy via Vercel CLI; regression harness (coming soon) seeds tenants and hits `/ask`, `/skills`, `/ingest`.
+
 ### **Tech Stack (100% Free)**
 
 | Component | Technology | Why Chosen | Cost |
@@ -362,6 +369,16 @@ docker-compose logs -f api       # View API logs
 docker-compose down              # Stop services
 ```
 
+### **Regression Suite**
+```bash
+# In one terminal
+cd backend
+uvicorn main:app --reload
+
+# In another terminal
+python3 backend/tests/regression_suite.py
+```
+This seeds two synthetic tenants (embedded engineer + healthcare data scientist), ingests their sample documents, and runs a battery of `/ask` queries to spot regressions.
 ---
 
 ## 📋 **Detailed File Explanations**

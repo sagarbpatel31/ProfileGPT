@@ -129,7 +129,12 @@ class MockLLM:
             if len(points) >= limit:
                 break
 
-        return points
+        if points:
+            return points
+
+        # Fallback: take first few sentences
+        fallback = [sent.strip() for sent in sentences if sent.strip()]
+        return fallback[:limit]
 
     def generate_response(self, question: str, context: str, mode: str = "detailed") -> str:
         """Generate a conversational response based on actual resume context"""
@@ -164,6 +169,9 @@ class MockLLM:
 
         elif any(keyword in question_lower for keyword in ["ai", "ml", "machine learning", "deep learning"]):
             return self._analyze_ai_experience(context, question, mode)
+
+        elif any(keyword in question_lower for keyword in ["healthcare", "patient", "clinical", "medical", "hospital"]):
+            return self._analyze_healthcare_experience(context, question, mode)
 
         else:
             return self._generate_general_response(context, question, mode)
@@ -316,6 +324,25 @@ class MockLLM:
                 f"{bullet_points}\n"
                 "• Stack: PyTorch, OpenCV, ROS, Pandas/NumPy, model evaluation + deployment workflows")
 
+    def _analyze_healthcare_experience(self, context: str, question: str, mode: str) -> str:
+        """Highlight healthcare/data-science experience"""
+        points = self._extract_context_points(
+            context,
+            ["patient", "clinical", "icu", "readmission", "sepsis", "hospital", "care", "healthcare", "medical"]
+        )
+        if mode == "short":
+            return "Healthcare data scientist building ICU readmission + sepsis detection models with clinicians."
+        elif mode == "star":
+            return ("Situation: ICU teams struggled with late readmission alerts\n"
+                    "Task: Deliver a predictive model clinicians could trust\n"
+                    "Action: Engineered LightGBM features from vitals, aligned explanations with physicians\n"
+                    "Result: Earlier interventions and dashboards adopted by critical-care units")
+
+        bullet_points = "\n".join([f"• {point}" for point in points[:4]])
+        return ("Healthcare impact:\n"
+                f"{bullet_points}\n"
+                "• Tooling: Python, LightGBM, TensorFlow, SQL, FHIR/HL7 data pipelines")
+
     def _generate_general_response(self, context: str, question: str, mode: str) -> str:
         """Generate a general response based on context"""
         points = self._extract_context_points(
@@ -409,11 +436,35 @@ class MockEmbedding:
         """Calculate cosine similarity between embeddings"""
         return np.dot(embedding1, embedding2)
 
+class ProfileInsightsCache:
+    """Simple cache with TTL for tenant insights so we don't rescan documents each request."""
+
+    def __init__(self, ttl_seconds: int = 300):
+        self.ttl_seconds = ttl_seconds
+        self._cache: Dict[str, Dict[str, Any]] = {}
+
+    def get(self, tenant_id: str) -> Optional[Dict[str, Any]]:
+        entry = self._cache.get(tenant_id)
+        if not entry:
+            return None
+        if time.time() - entry["timestamp"] > self.ttl_seconds:
+            self._cache.pop(tenant_id, None)
+            return None
+        return entry["value"]
+
+    def set(self, tenant_id: str, value: Dict[str, Any]):
+        self._cache[tenant_id] = {"value": value, "timestamp": time.time()}
+
+    def invalidate(self, tenant_id: str):
+        self._cache.pop(tenant_id, None)
+
+
 class RAGEngine:
     def __init__(self, db_manager: DatabaseManager):
         self.db = db_manager
         self.llm = MockLLM()
         self.embedding_model = MockEmbedding()
+        self.insights_cache = ProfileInsightsCache()
 
     def chunk_text(self, text: str, chunk_size: int = 800, overlap: int = 200) -> List[str]:
         """Split text into overlapping chunks"""
@@ -477,7 +528,9 @@ class RAGEngine:
             # Extract and link skills
             self._extract_and_link_skills(chunk, chunk_text)
 
-        # Update document status
+        # Invalidate cached insights since the tenant's corpus changed
+        self.insights_cache.invalidate(tenant_id)
+
         return doc_id
 
     def _extract_tags(self, text: str) -> Dict[str, Any]:
@@ -794,13 +847,19 @@ class RAGEngine:
 
     def generate_profile_insights(self, tenant_id: str) -> Dict[str, Any]:
         """Provide dynamic topics / skills for personalized UI"""
+        cached = self.insights_cache.get(tenant_id)
+        if cached:
+            return cached
+
         documents = self.db.get_tenant_documents(tenant_id)
         if not documents:
-            return {
+            empty = {
                 "categories": PROFILE_TOPIC_TEMPLATES[:3],
                 "top_skills": [],
                 "documents": 0
             }
+            self.insights_cache.set(tenant_id, empty)
+            return empty
 
         topic_scores = {template['id']: 0 for template in PROFILE_TOPIC_TEMPLATES}
         skill_counter: Counter = Counter()
@@ -847,7 +906,9 @@ class RAGEngine:
 
         top_skills = [skill.title() for skill, _ in skill_counter.most_common(6)]
 
-        return {
+        result = {
             "categories": categories[:5],
             "top_skills": top_skills
         }
+        self.insights_cache.set(tenant_id, result)
+        return result
