@@ -124,15 +124,16 @@ class MockLLM:
             for summary in summaries[:limit]
         ]
 
-    def _format_short_points(self, points: List[str], fallback: str, limit: int = 2) -> str:
-        cleaned = [p.replace("•", "").strip(" -:") for p in points if p.strip()]
+    def _format_short_points(self, points: List[str], fallback: str, limit: int = 3) -> str:
+        cleaned = [re.sub(r"^[-•]\s*", "", p).strip() for p in points if p and p.strip()]
         if cleaned:
             return "; ".join(cleaned[:limit])
         return fallback
 
     def _summaries_from_chunks(self, question: str, chunks: List[Dict[str, Any]], limit: int = 8) -> List[Dict[str, str]]:
         """Grab relevant sentences from context matching keywords"""
-        keywords = [word for word in re.sub(r"[^\w\s]", "", question.lower()).split() if len(word) > 2]
+        stop_words = {"what", "are", "your", "do", "you", "have", "can", "tell", "me", "about", "how", "when", "where", "why", "is", "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with", "by"}
+        keywords = [word for word in re.sub(r"[^\w\s\+\#]", "", question.lower()).split() if len(word) > 2 and word not in stop_words]
         summaries: List[Dict[str, str]] = []
 
         for chunk in chunks:
@@ -929,13 +930,12 @@ class RAGEngine:
         sources: List[Dict[str, Any]] = []
 
         for idx, evidence in enumerate(evidence_list, start=1):
-            snippet = (evidence.get('text') or '').strip()
-            snippet = re.sub(r'\s+', ' ', snippet)
+            snippet = self._highlight_skill_sentence(skill_name, evidence.get('text') or '')
             source_title = evidence.get('title') or "Document"
             section = evidence.get('section') or "Experience"
             chunk_id = evidence.get('chunk_id') or f"skill-{skill_name.lower()}-{idx}"
 
-            lines.append(f"- {source_title} – {snippet[:220]} [{idx}]")
+            lines.append(f"- {source_title} – {snippet} [{idx}]")
 
             citations.append({
                 "index": idx,
@@ -956,6 +956,14 @@ class RAGEngine:
 
         answer = "\n".join(lines)
         return answer, citations, sources
+
+    def _highlight_skill_sentence(self, skill_name: str, text: str) -> str:
+        sentences = re.split(r'(?<=[.!?])\s+', text)
+        skill_lower = skill_name.lower()
+        for sentence in sentences:
+            if skill_lower in sentence.lower():
+                return sentence.strip()
+        return (sentences[0].strip() if sentences else text[:200]) or f"Documented experience with {skill_name}."
 
     def check_skill(self, skill_name: str, tenant_id: str = "demo-tenant") -> Dict[str, Any]:
         """Check if a skill exists and return evidence"""
