@@ -118,78 +118,94 @@ class MockLLM:
     def __init__(self):
         pass
 
-    def _extract_context_points(self, context: str, keywords: List[str], limit: int = 4) -> List[str]:
-        """Grab relevant sentences from context matching keywords"""
-        sentences = re.split(r'(?<=[.!?])\s+', context)
-        points = []
+    def _extract_context_points(self, summaries: List[Dict[str, str]], limit: int = 4) -> List[str]:
+        return [
+            f"{summary['title']}: {summary['sentence']}"
+            for summary in summaries[:limit]
+        ]
 
-        for sentence in sentences:
-            clean = sentence.strip()
-            if not clean:
+    def _summaries_from_chunks(self, question: str, chunks: List[Dict[str, Any]], limit: int = 8) -> List[Dict[str, str]]:
+        """Grab relevant sentences from context matching keywords"""
+        keywords = [word for word in re.sub(r"[^\w\s]", "", question.lower()).split() if len(word) > 2]
+        summaries: List[Dict[str, str]] = []
+
+        for chunk in chunks:
+            text = chunk.get("text", "")
+            if not text:
                 continue
-            lower = clean.lower()
-            if any(keyword in lower for keyword in keywords):
-                if clean not in points:
-                    points.append(clean)
-            if len(points) >= limit:
+
+            sentences = re.split(r'(?<=[.!?])\s+', text)
+            match_added = False
+
+            for sentence in sentences:
+                clean = sentence.strip()
+                if not clean:
+                    continue
+                lower = clean.lower()
+                if keywords and any(keyword in lower for keyword in keywords):
+                    summaries.append({
+                        "sentence": clean,
+                        "title": chunk.get("title", "Document"),
+                        "section": chunk.get("section"),
+                    })
+                    match_added = True
+                    break
+
+            if not match_added and sentences:
+                summaries.append({
+                    "sentence": sentences[0].strip(),
+                    "title": chunk.get("title", "Document"),
+                    "section": chunk.get("section")
+                })
+
+            if len(summaries) >= limit:
                 break
 
-        if points:
-            return points
+        return summaries[:limit]
 
-        # Fallback: take first few sentences
-        fallback = [sent.strip() for sent in sentences if sent.strip()]
-        return fallback[:limit]
-
-    def generate_response(self, question: str, context: str, mode: str = "detailed") -> str:
+    def generate_response(self, question: str, chunks: List[Dict[str, Any]], mode: str = "detailed") -> str:
         """Generate a conversational response based on actual resume context"""
         question_lower = question.lower()
+        summaries = self._summaries_from_chunks(question, chunks)
 
-        # Extract key information from context
-        if not context or context.strip() == "":
+        if not summaries:
             return self._friendly_no_context_response(question, mode)
 
         # Handle personal/casual questions first
         if any(keyword in question_lower for keyword in ["how are you", "how's it going", "how you doing", "what's up", "hey", "hi", "hello"]):
-            return self._handle_personal_greeting(context, question, mode)
+            return self._handle_personal_greeting(summaries, question, mode)
 
         # Analyze the question type and context to provide personalized responses
         elif any(keyword in question_lower for keyword in ["python", "programming", "coding", "development"]):
-            return self._analyze_python_skills(context, question, mode)
+            return self._analyze_python_skills(summaries, question, mode)
 
         elif any(keyword in question_lower for keyword in ["experience", "work", "job", "career", "background"]):
-            return self._analyze_experience(context, question, mode)
+            return self._analyze_experience(summaries, question, mode)
 
         elif any(keyword in question_lower for keyword in ["skills", "technologies", "tech", "tools"]):
-            return self._analyze_technical_skills(context, question, mode)
+            return self._analyze_technical_skills(summaries, question, mode)
 
         elif any(keyword in question_lower for keyword in ["projects", "built", "developed", "created"]):
-            return self._analyze_projects(context, question, mode)
+            return self._analyze_projects(summaries, question, mode)
 
         elif any(keyword in question_lower for keyword in ["education", "degree", "university", "study"]):
-            return self._analyze_education(context, question, mode)
+            return self._analyze_education(summaries, question, mode)
 
         elif any(keyword in question_lower for keyword in ["embedded", "hardware", "firmware", "cisco"]):
-            return self._analyze_embedded_experience(context, question, mode)
+            return self._analyze_embedded_experience(summaries, question, mode)
 
         elif any(keyword in question_lower for keyword in ["ai", "ml", "machine learning", "deep learning"]):
-            return self._analyze_ai_experience(context, question, mode)
+            return self._analyze_ai_experience(summaries, question, mode)
 
         elif any(keyword in question_lower for keyword in ["healthcare", "patient", "clinical", "medical", "hospital"]):
-            return self._analyze_healthcare_experience(context, question, mode)
+            return self._analyze_healthcare_experience(summaries, question, mode)
 
         else:
-            return self._generate_general_response(context, question, mode)
+            return self._generate_general_response(summaries, question, mode)
 
-    def _analyze_python_skills(self, context: str, question: str, mode: str) -> str:
+    def _analyze_python_skills(self, summaries: List[Dict[str, str]], question: str, mode: str) -> str:
         """Analyze Python skills from resume context"""
-        points = self._extract_context_points(context, ["python", "automation", "script", "pipeline"])
-        if not points:
-            points = [
-                "Automated hardware health checks and validation flows using Python scripting.",
-                "Connected firmware events to cloud dashboards through Python-based services.",
-                "Used Python ML stacks (PyTorch, Pandas, NumPy) for research prototypes."
-            ]
+        points = self._extract_context_points(summaries, limit=4)
 
         if mode == "short":
             return "Python is my daily driver for automation, backend services, and ML prototypes."
@@ -204,12 +220,9 @@ class MockLLM:
                 f"{bullet_points}\n"
                 "• Tooling: PyTorch, FastAPI, Pandas, NumPy, automation frameworks")
 
-    def _analyze_experience(self, context: str, question: str, mode: str) -> str:
+    def _analyze_experience(self, summaries: List[Dict[str, str]], question: str, mode: str) -> str:
         """Analyze work experience from context"""
-        points = self._extract_context_points(
-            context,
-            ["embedded", "firmware", "iot", "research", "engineer", "led", "developed"]
-        )
+        points = self._extract_context_points(summaries, limit=4)
 
         if not points:
             points = [
@@ -231,7 +244,7 @@ class MockLLM:
                 f"{bullet_points}\n"
                 "• Collaboration: cross-functional work with hardware, cloud, and research teams")
 
-    def _analyze_technical_skills(self, context: str, question: str, mode: str) -> str:
+    def _analyze_technical_skills(self, summaries: List[Dict[str, str]], question: str, mode: str) -> str:
         """Analyze technical skills from context"""
         if mode == "short":
             return "Blend of C/C++, Python, embedded Linux, cloud integrations, and AI/ML tooling."
@@ -241,19 +254,20 @@ class MockLLM:
                     "Action: Became fluent in C/C++, Python, ROS, cloud services, and ML frameworks\n"
                     "Result: Delivered projects like autonomous drones and IoT telemetry pipelines independently")
 
-        return ("Technical strengths:\n"
-                "• Programming: Python, C/C++, Bash, ROS nodes, automation scripting\n"
-                "• Embedded: Raspberry Pi, STM32, ESP32, Nvidia Jetson, I2C/SPI/UART integrations\n"
-                "• AI/ML: PyTorch, computer vision (UNet, ResAttUNet), data prep with Pandas/NumPy\n"
-                "• Cloud & DevOps: API design with FastAPI, Dockerized services, CI/CD pipelines, observability dashboards\n"
-                "• Operating Systems: Linux bring-up, device drivers, low-level debugging with GDB/JTAG")
+        bullet_points = "\n".join([f"• {point}" for point in self._extract_context_points(summaries, limit=4)])
+        if bullet_points.strip() == "•":
+            bullet_points = ("• Programming: Python, C/C++, Bash, ROS nodes, automation scripting\n"
+                             "• Embedded: Raspberry Pi, STM32, ESP32, Nvidia Jetson, I2C/SPI/UART integrations\n"
+                             "• AI/ML: PyTorch, computer vision (UNet, ResAttUNet), data prep with Pandas/NumPy\n"
+                             "• Cloud & DevOps: API design with FastAPI, Dockerized services, CI/CD pipelines, observability dashboards\n"
+                             "• Operating Systems: Linux bring-up, device drivers, low-level debugging with GDB/JTAG")
 
-    def _analyze_projects(self, context: str, question: str, mode: str) -> str:
+        return ("Technical strengths:\n"
+                f"{bullet_points}")
+
+    def _analyze_projects(self, summaries: List[Dict[str, str]], question: str, mode: str) -> str:
         """Analyze projects from context"""
-        points = self._extract_context_points(
-            context,
-            ["project", "built", "developed", "designed", "research", "drone", "iot", "model"]
-        )
+        points = self._extract_context_points(summaries, limit=4)
         if not points:
             points = [
                 "Autonomous drone platform with GPS-less navigation using Jetson Nano + SLAM.",
@@ -275,40 +289,45 @@ class MockLLM:
                 f"{bullet_points}\n"
                 "Each project blends embedded hardware, AI models, and production-ready automation.")
 
-    def _analyze_education(self, context: str, question: str, mode: str) -> str:
+    def _analyze_education(self, summaries: List[Dict[str, str]], question: str, mode: str) -> str:
         """Analyze educational background"""
+        points = self._extract_context_points(summaries, limit=3)
         if mode == "short":
             return "MS Computer Science (in progress), MS Embedded Systems from UCI (3.95 GPA), BTech ECE Gold Medalist."
         elif mode == "star":
             return "Situation: Pursuing advanced education in technology\nTask: Build strong academic foundation\nAction: Completed MS in Embedded Systems at UCI with 3.95 GPA, pursuing MS Computer Science\nResult: Gold Medalist in BTech, strong academic performance supporting professional growth"
 
-        return ("I have a strong educational foundation in computer science and embedded systems: "
-                "**Current**: Pursuing Master of Science in Computer Science at Sofia University (expected June 2027). "
-                "**Completed**: Master of Embedded and Cyber Physical Systems from UC Irvine with an impressive 3.95/4.0 GPA. "
-                "**Undergraduate**: Bachelor of Technology in Electronics and Communication Engineering from Charotar University with a perfect 4.0 GPA and Gold Medalist recognition. "
-                "My academic background provides a solid theoretical foundation that I've successfully applied in professional roles at companies like Cisco Systems. The combination of embedded systems specialization and computer science breadth gives me a unique perspective on hardware-software integration.")
+        bullet_points = "\n".join([f"• {point}" for point in points]) if points else (
+            "• MS Computer Science (in progress)\n"
+            "• MS Embedded & Cyber-Physical Systems, UC Irvine (3.95 GPA)\n"
+            "• BTech Electronics & Communication, Gold Medalist"
+        )
 
-    def _analyze_embedded_experience(self, context: str, question: str, mode: str) -> str:
+        return ("I have a strong educational foundation:\n"
+                f"{bullet_points}\n"
+                "• Combines embedded specialization with computer science breadth.")
+
+    def _analyze_embedded_experience(self, summaries: List[Dict[str, str]], question: str, mode: str) -> str:
         """Analyze embedded systems experience"""
+        points = self._extract_context_points(summaries, limit=4)
         if mode == "short":
             return "2+ years at Cisco with embedded systems, firmware, and hardware validation expertise."
         elif mode == "star":
             return "Situation: Cisco needed next-gen switch validation\nTask: Lead board bring-up for complex hardware\nAction: Developed C/C++ tools, automated testing, coordinated with multiple teams\nResult: Achieved high validation rates and streamlined development process"
 
-        return ("I have extensive embedded systems experience, primarily from my 2+ years at Cisco Systems where I specialized in enterprise-grade hardware: "
-                "**Hardware Validation**: Led board bring-up and validation for next-generation enterprise switches, working with PHY, FPGA, PoE, and TPM components. "
-                "**Firmware Development**: Created embedded firmware in C++ for PSE/PSU modules, optimizing runtime diagnostics and reducing response times. "
-                "**Real-time Systems**: Developed CLI tools with support for real-time voltage, thermal, and PoE telemetry monitoring. "
-                "**Integration**: Currently at R-Tek, I'm integrating various embedded platforms (Raspberry Pi, STM32, ESP32) with cloud services for IoT applications. "
-                "**Protocols**: Proficient in I2C, SPI, UART communication protocols and have experience with FreeRTOS and Linux device drivers. "
-                "My embedded expertise spans from low-level firmware to system-level integration.")
-
-    def _analyze_ai_experience(self, context: str, question: str, mode: str) -> str:
-        """Analyze AI/ML experience"""
-        points = self._extract_context_points(
-            context,
-            ["ai", "ml", "learning", "model", "vision", "drone", "slam", "automation"]
+        bullet_points = "\n".join([f"• {point}" for point in points]) if points else (
+            "• Hardware validation for Cisco enterprise switches (PHY/FPGA/PoE)\n"
+            "• Firmware in C++ for diagnostics, telemetry, and CLI tools\n"
+            "• Integrations across Raspberry Pi, STM32, ESP32 with cloud services"
         )
+
+        return ("Embedded systems profile:\n"
+                f"{bullet_points}\n"
+                "• Comfortable from low-level firmware to system-level integration.")
+
+    def _analyze_ai_experience(self, summaries: List[Dict[str, str]], question: str, mode: str) -> str:
+        """Analyze AI/ML experience"""
+        points = self._extract_context_points(summaries, limit=4)
         if not points:
             points = [
                 "Developed ResAttUNet segmentation models (>80 IoU) for marine plastic detection with Omdena.",
@@ -329,12 +348,9 @@ class MockLLM:
                 f"{bullet_points}\n"
                 "• Stack: PyTorch, OpenCV, ROS, Pandas/NumPy, model evaluation + deployment workflows")
 
-    def _analyze_healthcare_experience(self, context: str, question: str, mode: str) -> str:
+    def _analyze_healthcare_experience(self, summaries: List[Dict[str, str]], question: str, mode: str) -> str:
         """Highlight healthcare/data-science experience"""
-        points = self._extract_context_points(
-            context,
-            ["patient", "clinical", "icu", "readmission", "sepsis", "hospital", "care", "healthcare", "medical"]
-        )
+        points = self._extract_context_points(summaries, limit=4)
         if mode == "short":
             return "Healthcare data scientist building ICU readmission + sepsis detection models with clinicians."
         elif mode == "star":
@@ -348,12 +364,9 @@ class MockLLM:
                 f"{bullet_points}\n"
                 "• Tooling: Python, LightGBM, TensorFlow, SQL, FHIR/HL7 data pipelines")
 
-    def _generate_general_response(self, context: str, question: str, mode: str) -> str:
+    def _generate_general_response(self, summaries: List[Dict[str, str]], question: str, mode: str) -> str:
         """Generate a general response based on context"""
-        points = self._extract_context_points(
-            context,
-            ["embedded", "cloud", "research", "ai", "project", "team", "automation"]
-        )
+        points = self._extract_context_points(summaries, limit=4)
         if not points:
             points = [
                 "Embedded systems development at Cisco (board bring-up, firmware, diagnostics).",
@@ -386,7 +399,7 @@ class MockLLM:
                 "Feel free to ask me about my Python skills, embedded systems experience, AI/ML projects, education, or any specific technologies you're curious about. "
                 "What would you like to know more about?")
 
-    def _handle_personal_greeting(self, context: str, question: str, mode: str) -> str:
+    def _handle_personal_greeting(self, summaries: List[Dict[str, str]], question: str, mode: str) -> str:
         """Handle personal greetings and casual questions"""
         question_lower = question.lower()
 
@@ -763,11 +776,18 @@ class RAGEngine:
 
         # 2. Prepare context from retrieved chunks
         context_chunks = [chunk for chunk, score in scored_chunks]
-        context = '\n\n'.join([f"From {chunk.title} ({chunk.source_type}): {chunk.text[:300]}..."
-                              for chunk in context_chunks])
+        chunk_dicts = [
+            {
+                "text": chunk.text,
+                "title": chunk.title,
+                "section": chunk.section,
+                "source_type": chunk.source_type
+            }
+            for chunk in context_chunks
+        ]
 
         # 3. Generate answer using LLM
-        answer = self.llm.generate_response(question, context, mode)
+        answer = self.llm.generate_response(question, chunk_dicts, mode)
 
         # 4. Create citations and sources
         citations = []
