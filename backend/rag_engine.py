@@ -194,6 +194,9 @@ class MockLLM:
         elif any(keyword in question_lower for keyword in ["embedded", "hardware", "firmware", "cisco"]):
             return self._analyze_embedded_experience(summaries, question, mode)
 
+        elif any(keyword in question_lower for keyword in ["rtos", "real-time", "freertos", "real time operating", "scheduler"]):
+            return self._analyze_rtos_experience(summaries, question, mode)
+
         elif any(keyword in question_lower for keyword in ["ai", "ml", "machine learning", "deep learning"]):
             return self._analyze_ai_experience(summaries, question, mode)
 
@@ -324,6 +327,31 @@ class MockLLM:
         return ("Embedded systems profile:\n"
                 f"{bullet_points}\n"
                 "• Comfortable from low-level firmware to system-level integration.")
+
+    def _analyze_rtos_experience(self, summaries: List[Dict[str, str]], question: str, mode: str) -> str:
+        """Describe RTOS expertise explicitly"""
+        points = [s for s in summaries if any(keyword in s['sentence'].lower() for keyword in ["rtos", "real-time", "free rtos", "scheduler"])]
+        formatted = self._extract_context_points(points, limit=3)
+
+        if mode == "short":
+            return "Comfortable with FreeRTOS/Linux RTOS work: interrupt handling, scheduling, and telemetry loops."
+        elif mode == "star":
+            return ("Situation: Needed deterministic telemetry for Cisco switch bring-up\n"
+                    "Task: Build RTOS routines handling PoE diagnostics + safety\n"
+                    "Action: Implemented FreeRTOS tasks, ISR hooks, and watchdog flows on embedded controllers\n"
+                    "Result: Reliable runtime diagnostics and faster board validation cycles")
+
+        if not formatted:
+            formatted = [
+                "Developed FreeRTOS tasks for telemetry, safety shutdown, and diagnostics loops.",
+                "Integrated RTOS scheduling with C/C++ CLI utilities to monitor board health.",
+                "Comfortable managing interrupts, timers, and cooperative scheduling patterns."
+            ]
+
+        bullet_points = "\n".join(f"• {point}" for point in formatted)
+        return ("RTOS background:\n"
+                f"{bullet_points}\n"
+                "• Experience spans FreeRTOS, Linux-based RT scheduling, and microcontroller interrupt design.")
 
     def _analyze_ai_experience(self, summaries: List[Dict[str, str]], question: str, mode: str) -> str:
         """Analyze AI/ML experience"""

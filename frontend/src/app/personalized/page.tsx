@@ -288,7 +288,7 @@ export default function PersonalizedProfileGPT() {
     const welcomeMessage: Message = {
       id: 'welcome',
       role: 'assistant',
-      text: `Hi there! 👋 I'm your AI portfolio assistant. Ask me anything about ${subjectLabel} professional background, experience, or education and I'll respond with recruiter-friendly highlights plus citations.`,
+      text: `Hi there! 👋 Ask me anything about ${subjectLabel} experience, skills, or education. I'll respond with concise bullet points, STAR stories, and citations so recruiters can trust every answer.`,
       timestamp: new Date()
     };
     setMessages([welcomeMessage]);
@@ -393,20 +393,30 @@ export default function PersonalizedProfileGPT() {
                 </button>
               ))}
             </div>
-          </div>
+        </div>
 
-          {topSkills.length > 0 && (
-            <div className="mt-4">
-              <p className="text-xs font-semibold text-gray-500 mb-1">Top strengths</p>
-              <div className="flex flex-wrap gap-2">
-                {topSkills.map(skill => (
-                  <span key={skill} className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs border border-gray-200">
-                    {skill}
-                  </span>
-                ))}
+        {(tenantInfo?.profession || topSkills.length > 0) && (
+          <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-xl space-y-3">
+            {tenantInfo?.profession && (
+              <div>
+                <p className="text-xs uppercase tracking-wide text-gray-500 font-semibold">Profession</p>
+                <p className="text-sm text-gray-800">{tenantInfo.profession}</p>
               </div>
-            </div>
-          )}
+            )}
+            {topSkills.length > 0 && (
+              <div>
+                <p className="text-xs uppercase tracking-wide text-gray-500 font-semibold mb-2">Top strengths</p>
+                <div className="flex flex-wrap gap-2">
+                  {topSkills.map(skill => (
+                    <span key={skill} className="px-2 py-1 bg-white text-gray-800 rounded-full text-xs border border-gray-200">
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
