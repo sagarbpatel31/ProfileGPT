@@ -8,6 +8,7 @@ export default function SignupPage() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    password: '',
     profession: '',
     bio: ''
   });
@@ -26,7 +27,7 @@ export default function SignupPage() {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:8000/tenant', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/tenant`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -34,6 +35,7 @@ export default function SignupPage() {
         body: JSON.stringify({
           name: formData.name,
           email: formData.email,
+          password: formData.password,
           profession: formData.profession,
           bio: formData.bio
         }),
@@ -41,15 +43,16 @@ export default function SignupPage() {
 
       const data = await response.json();
 
-      if (response.ok) {
-        // Store tenant info in localStorage
-        localStorage.setItem('profilegpt_tenant', JSON.stringify({
-          tenant_id: data.tenant_id,
-          name: data.name,
-          api_key: data.api_key,
-          embed_code: data.embed_code,
-          chat_url: data.chat_url
-        }));
+        if (response.ok) {
+          // Store tenant info in localStorage
+          localStorage.setItem('profilegpt_tenant', JSON.stringify({
+            tenant_id: data.tenant_id,
+            name: data.name,
+            email: data.email,
+            api_key: data.api_key,
+            embed_code: data.embed_code,
+            chat_url: data.chat_url
+          }));
 
         // Redirect to dashboard
         router.push('/dashboard');
@@ -57,6 +60,7 @@ export default function SignupPage() {
         setError(data.detail || 'Failed to create account');
       }
     } catch (error) {
+      console.error('Signup error:', error);
       setError('Network error. Please make sure the backend server is running.');
     } finally {
       setIsLoading(false);
@@ -91,7 +95,7 @@ export default function SignupPage() {
               name="name"
               value={formData.name}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black placeholder-gray-500"
               placeholder="John Doe"
               required
             />
@@ -106,11 +110,27 @@ export default function SignupPage() {
               name="email"
               value={formData.email}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="john@example.com"
-              required
-            />
-          </div>
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black placeholder-gray-500"
+          placeholder="john@example.com"
+          required
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Create Password *
+        </label>
+        <input
+          type="password"
+          name="password"
+          value={formData.password}
+          onChange={handleInputChange}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black placeholder-gray-500"
+          placeholder="Choose a secure password"
+          required
+        />
+        <p className="text-xs text-gray-500 mt-1">Use at least 8 characters for better security.</p>
+      </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -121,7 +141,7 @@ export default function SignupPage() {
               name="profession"
               value={formData.profession}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black placeholder-gray-500"
               placeholder="Software Engineer"
             />
           </div>
@@ -135,7 +155,7 @@ export default function SignupPage() {
               value={formData.bio}
               onChange={handleInputChange}
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black placeholder-gray-500"
               placeholder="Tell us a bit about yourself..."
             />
           </div>
@@ -167,15 +187,15 @@ export default function SignupPage() {
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-600">
             Already have an account?{' '}
-            <Link href="/dashboard" className="text-blue-600 hover:text-blue-500">
-              Go to Dashboard
+            <Link href="/login" className="text-blue-600 hover:text-blue-500">
+              Log in here
             </Link>
           </p>
         </div>
 
         <div className="mt-8 pt-6 border-t border-gray-200">
           <div className="text-center">
-            <h3 className="text-sm font-medium text-gray-900 mb-2">What you'll get:</h3>
+            <h3 className="text-sm font-medium text-gray-900 mb-2">What you&apos;ll get:</h3>
             <ul className="text-sm text-gray-600 space-y-1">
               <li>✅ AI-powered Q&A about your background</li>
               <li>✅ Document upload and processing</li>

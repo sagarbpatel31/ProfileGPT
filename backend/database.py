@@ -8,6 +8,8 @@ from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass
 from datetime import datetime
 import os
+import hashlib
+import uuid
 
 @dataclass
 class Chunk:
@@ -54,11 +56,17 @@ class DatabaseManager:
         CREATE TABLE IF NOT EXISTS tenants (
             id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
-            email TEXT NOT NULL,
+            email TEXT NOT NULL UNIQUE,
+            password_hash TEXT,
+            profession TEXT,
+            bio TEXT,
             api_key TEXT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         ''')
+        self._ensure_column(cursor, 'tenants', 'password_hash', 'TEXT')
+        self._ensure_column(cursor, 'tenants', 'profession', 'TEXT')
+        self._ensure_column(cursor, 'tenants', 'bio', 'TEXT')
 
         # Documents table
         cursor.execute('''
@@ -135,13 +143,29 @@ class DatabaseManager:
         ''')
 
         # Create default tenant for demo
+        demo_password_hash = hashlib.sha256("demo1234".encode('utf-8')).hexdigest()
         cursor.execute('''
-        INSERT OR IGNORE INTO tenants (id, name, email, api_key)
-        VALUES ('demo-tenant', 'Demo User', 'demo@profilegpt.com', 'pk_demo_123')
-        ''')
+        INSERT OR IGNORE INTO tenants (id, name, email, password_hash, profession, bio, api_key)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            'demo-tenant',
+            'Demo User',
+            'demo@profilegpt.com',
+            demo_password_hash,
+            'Software Engineer',
+            'Default demo profile for ProfileGPT.',
+            'pk_demo_123'
+        ))
 
         conn.commit()
         conn.close()
+
+    def _ensure_column(self, cursor, table: str, column: str, definition: str):
+        """Ensure a column exists in a table for backwards compatibility"""
+        cursor.execute(f"PRAGMA table_info({table})")
+        columns = [row[1] for row in cursor.fetchall()]
+        if column not in columns:
+            cursor.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
 
     def add_document(self, doc: Document) -> str:
         """Add a new document to the database"""
@@ -175,6 +199,80 @@ class DatabaseManager:
         conn.commit()
         conn.close()
         return chunk.id
+
+    def get_tenant_skill_names(self, tenant_id: str) -> List[str]:
+        """Return all skill names defined for a tenant"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute('SELECT DISTINCT name FROM skills WHERE tenant_id = ?', (tenant_id,))
+        rows = cursor.fetchall()
+        conn.close()
+
+        return [row['name'] for row in rows if row['name']]
+
+    def create_tenant_account(
+        self,
+        name: str,
+        email: str,
+        password: str,
+        profession: Optional[str] = None,
+        bio: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Create a tenant entry with hashed password"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute('SELECT id FROM tenants WHERE email = ?', (email,))
+        if cursor.fetchone():
+            conn.close()
+            raise ValueError("An account with this email already exists.")
+
+        tenant_id = f"tenant_{uuid.uuid4().hex[:8]}"
+        api_key = f"pk_{tenant_id}_{uuid.uuid4().hex[:12]}"
+        password_hash = hashlib.sha256(password.encode('utf-8')).hexdigest()
+
+        cursor.execute('''
+        INSERT INTO tenants (id, name, email, password_hash, profession, bio, api_key)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (tenant_id, name, email, password_hash, profession, bio, api_key))
+
+        conn.commit()
+        conn.close()
+
+        return {
+            "tenant_id": tenant_id,
+            "name": name,
+            "email": email,
+            "profession": profession,
+            "bio": bio,
+            "api_key": api_key
+        }
+
+    def verify_tenant_credentials(self, email: str, password: str) -> Optional[Dict[str, Any]]:
+        """Validate stored credentials for login"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute('SELECT * FROM tenants WHERE email = ?', (email,))
+        row = cursor.fetchone()
+        conn.close()
+
+        if not row or not row['password_hash']:
+            return None
+
+        password_hash = hashlib.sha256(password.encode('utf-8')).hexdigest()
+        if row['password_hash'] != password_hash:
+            return None
+
+        return {
+            "tenant_id": row['id'],
+            "name": row['name'],
+            "email": row['email'],
+            "profession": row['profession'],
+            "bio": row['bio'],
+            "api_key": row['api_key']
+        }
 
     def search_chunks_by_text(self, query: str, tenant_id: str, limit: int = 5) -> List[Chunk]:
         """Simple text search for chunks (BM25-like)"""
@@ -314,7 +412,9 @@ class DatabaseManager:
                         'text': chunk.text[:200] + '...',
                         'title': chunk.title,
                         'section': chunk.section,
-                        'url': chunk.url
+                        'url': chunk.url,
+                        'chunk_id': chunk.id,
+                        'source_type': chunk.source_type
                     })
 
             conn.close()

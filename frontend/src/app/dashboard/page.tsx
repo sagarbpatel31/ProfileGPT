@@ -4,9 +4,14 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
 interface TenantInfo {
   tenant_id: string;
   name: string;
+  email?: string;
+  profession?: string;
+  bio?: string;
   api_key: string;
   embed_code: string;
   chat_url: string;
@@ -20,6 +25,22 @@ interface Document {
   chunks_created?: number;
 }
 
+interface DocumentResponse {
+  id: string;
+  title: string;
+  source_type: string;
+  url?: string | null;
+  chunks_count: number;
+  created_at: string;
+}
+
+interface SupportedPlatform {
+  name: string;
+  domain: string;
+  example: string;
+  note?: string;
+}
+
 export default function Dashboard() {
   const [tenantInfo, setTenantInfo] = useState<TenantInfo | null>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -30,7 +51,8 @@ export default function Dashboard() {
   const [uploadError, setUploadError] = useState('');
   const [uploadMode, setUploadMode] = useState<'file' | 'url'>('file');
   const [profileUrl, setProfileUrl] = useState('');
-  const [supportedPlatforms, setSupportedPlatforms] = useState<any[]>([]);
+  const [supportedPlatforms, setSupportedPlatforms] = useState<SupportedPlatform[]>([]);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -43,18 +65,23 @@ export default function Dashboard() {
     }
 
     // Load supported platforms
-    fetch('http://localhost:8000/platforms')
+    fetch(`${API_BASE}/platforms`)
       .then(res => res.json())
-      .then(data => setSupportedPlatforms(data.supported_platforms))
+      .then(data => setSupportedPlatforms(data.supported_platforms || []))
       .catch(err => console.error('Failed to load platforms:', err));
   }, []);
+  useEffect(() => {
+    if (infoMessage && documents.length > 0) {
+      setInfoMessage(null);
+    }
+  }, [documents, infoMessage]);
 
   const loadDocuments = async (tenantId: string) => {
     try {
-      const response = await fetch(`http://localhost:8000/documents/${tenantId}`);
+      const response = await fetch(`${API_BASE}/documents/${tenantId}`);
       const data = await response.json();
 
-      const formattedDocs = data.documents.map((doc: any) => ({
+      const formattedDocs = data.documents.map((doc: DocumentResponse) => ({
         id: doc.id,
         title: doc.title,
         source_type: doc.source_type,
@@ -74,7 +101,7 @@ export default function Dashboard() {
     if (!confirm('Are you sure you want to delete this document?')) return;
 
     try {
-      const response = await fetch(`http://localhost:8000/documents/${documentId}`, {
+      const response = await fetch(`${API_BASE}/documents/${documentId}`, {
         method: 'DELETE'
       });
 
@@ -108,7 +135,7 @@ export default function Dashboard() {
     }
 
     try {
-      const response = await fetch('http://localhost:8000/ingest', {
+      const response = await fetch(`${API_BASE}/ingest`, {
         method: 'POST',
         body: formData,
       });
@@ -131,6 +158,7 @@ export default function Dashboard() {
         setUploadError(data.detail || 'Upload failed');
       }
     } catch (error) {
+      console.error('Error uploading file:', error);
       setUploadError('Network error. Please make sure the backend server is running.');
     } finally {
       setIsUploading(false);
@@ -145,7 +173,7 @@ export default function Dashboard() {
     setUploadError('');
 
     try {
-      const response = await fetch('http://localhost:8000/ingest/url', {
+      const response = await fetch(`${API_BASE}/ingest/url`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -172,6 +200,7 @@ export default function Dashboard() {
         setUploadError(data.message || 'URL import failed');
       }
     } catch (error) {
+      console.error('Error importing URL:', error);
       setUploadError('Network error. Please make sure the backend server is running.');
     } finally {
       setIsUploading(false);
@@ -215,16 +244,10 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <Link
-                href={`/?tenant=${tenantInfo.tenant_id}`}
-                className="text-blue-600 hover:text-blue-500 text-sm font-medium"
-              >
-                View Profile Chat
-              </Link>
               <button
                 onClick={() => {
                   localStorage.removeItem('profilegpt_tenant');
-                  router.push('/signup');
+                  router.push('/login');
                 }}
                 className="text-gray-500 hover:text-gray-700 text-sm"
               >
@@ -236,14 +259,30 @@ export default function Dashboard() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-6">
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-gray-900">Workspace verified</p>
+              <p className="text-sm text-gray-800">Signed in as {tenantInfo.email}. Tenant ID: {tenantInfo.tenant_id}</p>
+            </div>
+            <div className="text-sm text-gray-700">
+              Upload a resume, portfolio, GitHub, LinkedIn, or Google Scholar link to unlock your AI chat.
+            </div>
+          </div>
+        </div>
+        {infoMessage && (
+          <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-900">
+            {infoMessage}
+          </div>
+        )}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
           {/* Upload Section */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-lg shadow p-6 mb-8">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Add Content to Your ProfileGPT</h2>
-              <p className="text-gray-600 mb-6">
-                Import your professional content from various sources to train your ProfileGPT.
+              <p className="text-gray-700 mb-6">
+                Import resumes, portfolios, GitHub/LinkedIn/Google Scholar pages, or any professional site. Richer sources yield stronger answers.
               </p>
 
               {/* Upload Mode Selector */}
@@ -283,7 +322,7 @@ export default function Dashboard() {
                   <select
                     value={uploadType}
                     onChange={(e) => setUploadType(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
                   >
                     <option value="resume">Resume/CV</option>
                     <option value="cover_letter">Cover Letter</option>
@@ -303,7 +342,7 @@ export default function Dashboard() {
                     type="text"
                     value={uploadTitle || ''}
                     onChange={(e) => setUploadTitle(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black placeholder-gray-500"
                     placeholder="My Software Engineer Resume"
                   />
                 </div>
@@ -317,7 +356,7 @@ export default function Dashboard() {
                     type="file"
                     onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
                     accept=".pdf,.doc,.docx,.txt,.md"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     Supports: PDF, DOC, DOCX, TXT, MD files
@@ -348,12 +387,12 @@ export default function Dashboard() {
                       type="url"
                       value={profileUrl || ''}
                       onChange={(e) => setProfileUrl(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="https://github.com/username or https://linkedin.com/in/username"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black placeholder-gray-500"
+                      placeholder="https://github.com/username, https://linkedin.com/in/username, https://scholar.google.com/citations?user=..."
                       required
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                      Supported: GitHub, Dev.to, Stack Overflow, Medium, and more
+                      Paste a public GitHub/LinkedIn/Google Scholar/portfolio link and we’ll capture the visible content.
                     </p>
                   </div>
 
@@ -364,7 +403,7 @@ export default function Dashboard() {
                     <select
                       value={uploadType}
                       onChange={(e) => setUploadType(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
                     >
                       <option value="github_profile">GitHub Profile</option>
                       <option value="linkedin_profile">LinkedIn Profile</option>
@@ -385,7 +424,7 @@ export default function Dashboard() {
                       type="text"
                       value={uploadTitle}
                       onChange={(e) => setUploadTitle(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black placeholder-gray-500"
                       placeholder="My GitHub Profile"
                     />
                   </div>
@@ -407,12 +446,12 @@ export default function Dashboard() {
                   {/* Supported Platforms */}
                   {supportedPlatforms.length > 0 && (
                     <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-                      <h4 className="font-medium text-blue-900 mb-2">Supported Platforms:</h4>
-                      <div className="grid grid-cols-2 gap-2 text-sm">
+                      <h4 className="font-medium text-blue-900 mb-2">Popular Sources</h4>
+                      <div className="grid grid-cols-2 gap-2 text-sm text-blue-900">
                         {supportedPlatforms.map((platform, index) => (
-                          <div key={index} className="text-blue-700">
+                          <div key={index}>
                             • {platform.name}
-                            {platform.note && <span className="text-blue-500"> ({platform.note})</span>}
+                            {platform.note && <span className="text-blue-600"> ({platform.note})</span>}
                           </div>
                         ))}
                       </div>
@@ -513,12 +552,18 @@ export default function Dashboard() {
             <div className="bg-white rounded-lg shadow p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
               <div className="space-y-3">
-                <Link
-                  href={`/?tenant=${tenantInfo.tenant_id}`}
-                  className="block w-full bg-blue-600 text-white py-2 px-4 rounded text-center hover:bg-blue-700"
+                <button
+                  onClick={() => {
+                    if (documents.length === 0) {
+                      setInfoMessage('Please upload at least one document or profile URL before launching the chat.');
+                      return;
+                    }
+                    router.push(`/personalized?tenant=${tenantInfo.tenant_id}`);
+                  }}
+                  className={`w-full py-2 px-4 rounded text-white ${documents.length === 0 ? 'bg-blue-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
                 >
-                  Test Your ProfileGPT
-                </Link>
+                  Try Your ProfileGPT
+                </button>
                 <Link
                   href="/widget-demo.html"
                   target="_blank"
@@ -527,7 +572,7 @@ export default function Dashboard() {
                   Widget Demo
                 </Link>
                 <button
-                  onClick={() => window.open('http://localhost:8000/docs', '_blank')}
+                  onClick={() => window.open(`${API_BASE}/docs`, '_blank')}
                   className="w-full bg-gray-600 text-white py-2 px-4 rounded hover:bg-gray-700"
                 >
                   API Documentation

@@ -16,7 +16,6 @@
 
   // Widget state
   let isOpen = false;
-  let messages = [];
   let isLoading = false;
 
   // Create widget HTML

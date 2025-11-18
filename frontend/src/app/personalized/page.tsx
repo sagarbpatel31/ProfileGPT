@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { Send, User, Brain, Code, Briefcase, GraduationCap, Rocket } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Send, User, Brain, Code, Briefcase, GraduationCap, Rocket, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 
 interface Message {
@@ -18,11 +18,114 @@ interface Message {
 }
 
 interface DataCategory {
+  id?: string;
   icon: React.ReactNode;
   title: string;
   description: string;
   sampleQuestions: string[];
 }
+
+interface InsightCategoryResponse {
+  id?: string;
+  title: string;
+  description: string;
+  sampleQuestions?: string[];
+}
+
+interface TenantInfo {
+  tenant_id: string;
+  name?: string;
+  profession?: string;
+  bio?: string;
+}
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
+const getCategoryIcon = (categoryId?: string) => {
+  switch (categoryId) {
+    case 'technical':
+      return <Code className="w-5 h-5 text-purple-600" />;
+    case 'projects':
+      return <Rocket className="w-5 h-5 text-orange-600" />;
+    case 'ai_innovation':
+      return <Brain className="w-5 h-5 text-pink-600" />;
+    case 'education':
+      return <GraduationCap className="w-5 h-5 text-indigo-600" />;
+    case 'experience':
+      return <Briefcase className="w-5 h-5 text-green-600" />;
+    default:
+      return <User className="w-5 h-5 text-blue-600" />;
+  }
+};
+
+const DEFAULT_CATEGORIES: DataCategory[] = [
+  {
+    id: 'bio',
+    icon: <User className="w-5 h-5 text-blue-600" />,
+    title: "Professional Bio",
+    description: "Background and career focus",
+    sampleQuestions: [
+      "Give me a short professional summary.",
+      "What motivates this person?",
+      "Describe their background."
+    ]
+  },
+  {
+    id: 'experience',
+    icon: <Briefcase className="w-5 h-5 text-green-600" />,
+    title: "Experience Highlights",
+    description: "Roles, responsibilities, and impact",
+    sampleQuestions: [
+      "Walk me through their recent roles.",
+      "What did they accomplish in their last job?",
+      "Share a leadership example."
+    ]
+  },
+  {
+    id: 'technical',
+    icon: <Code className="w-5 h-5 text-purple-600" />,
+    title: "Technical Skills",
+    description: "Tools, languages, and frameworks",
+    sampleQuestions: [
+      "List their core technical strengths.",
+      "How strong are they with Python?",
+      "What technologies do they use daily?"
+    ]
+  },
+  {
+    id: 'projects',
+    icon: <Rocket className="w-5 h-5 text-orange-600" />,
+    title: "Projects & Impact",
+    description: "Notable work and measurable outcomes",
+    sampleQuestions: [
+      "Share a project with tangible impact.",
+      "What research have they contributed to?",
+      "Describe a complex problem they solved."
+    ]
+  },
+  {
+    id: 'ai_innovation',
+    icon: <Brain className="w-5 h-5 text-pink-600" />,
+    title: "AI & Innovation",
+    description: "Automation, ML, and experimentation",
+    sampleQuestions: [
+      "What AI/ML projects have they led?",
+      "How do they approach innovation?",
+      "Have they automated any workflows?"
+    ]
+  },
+  {
+    id: 'education',
+    icon: <GraduationCap className="w-5 h-5 text-indigo-600" />,
+    title: "Education & Credentials",
+    description: "Academic background and certifications",
+    sampleQuestions: [
+      "Summarize their education.",
+      "What did they study?",
+      "Do they hold any certifications?"
+    ]
+  }
+];
 
 export default function PersonalizedProfileGPT() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -30,71 +133,74 @@ export default function PersonalizedProfileGPT() {
   const [isLoading, setIsLoading] = useState(false);
   const [mode, setMode] = useState<'short' | 'detailed' | 'star'>('detailed');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [tenantInfo, setTenantInfo] = useState<TenantInfo | null>(null);
+  const [activeTenantId, setActiveTenantId] = useState('demo-tenant');
+  const [tenantSource, setTenantSource] = useState<'demo' | 'local' | 'query'>('demo');
+  const [tenantReady, setTenantReady] = useState(false);
+  const [hasIntroMessage, setHasIntroMessage] = useState(false);
+  const [categories, setCategories] = useState<DataCategory[]>(DEFAULT_CATEGORIES);
+  const [topSkills, setTopSkills] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const tenantId = 'tenant_ed07408a'; // Your tenant ID
 
-  const dataCategories: DataCategory[] = [
-    {
-      icon: <User className="w-5 h-5 text-blue-600" />,
-      title: "Professional Bio",
-      description: "Background and current role",
-      sampleQuestions: [
-        "Who are you?",
-        "Tell me about yourself",
-        "What's your background?"
-      ]
-    },
-    {
-      icon: <Briefcase className="w-5 h-5 text-green-600" />,
-      title: "Work Experience",
-      description: "Career history and roles",
-      sampleQuestions: [
-        "What's your work experience?",
-        "Tell me about Cisco",
-        "What do you do at R-Tek?"
-      ]
-    },
-    {
-      icon: <Code className="w-5 h-5 text-purple-600" />,
-      title: "Technical Skills",
-      description: "Programming and technologies",
-      sampleQuestions: [
-        "What are your Python skills?",
-        "What technologies do you know?",
-        "Tell me about your coding experience"
-      ]
-    },
-    {
-      icon: <Rocket className="w-5 h-5 text-orange-600" />,
-      title: "Projects & Research",
-      description: "Notable work and achievements",
-      sampleQuestions: [
-        "What projects have you built?",
-        "Tell me about your drone project",
-        "What AI research have you done?"
-      ]
-    },
-    {
-      icon: <Brain className="w-5 h-5 text-pink-600" />,
-      title: "AI & Machine Learning",
-      description: "Deep learning and research",
-      sampleQuestions: [
-        "What's your AI experience?",
-        "Tell me about machine learning",
-        "What deep learning models have you built?"
-      ]
-    },
-    {
-      icon: <GraduationCap className="w-5 h-5 text-indigo-600" />,
-      title: "Education",
-      description: "Academic background",
-      sampleQuestions: [
-        "What's your education?",
-        "Tell me about UC Irvine",
-        "What did you study?"
-      ]
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const stored = localStorage.getItem('profilegpt_tenant');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      setTenantInfo(parsed);
+      setActiveTenantId(parsed.tenant_id);
+      setTenantSource('local');
     }
-  ];
+
+    const params = new URLSearchParams(window.location.search);
+    const tenantParam = params.get('tenant');
+    if (tenantParam) {
+      setActiveTenantId(tenantParam);
+      if (!stored) {
+        setTenantSource('query');
+      }
+    }
+
+    setTenantReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!tenantReady) return;
+
+    fetch(`${API_BASE}/tenant/${activeTenantId}/insights`)
+      .then(res => res.json())
+      .then(data => {
+        const remoteCategories = (data.categories || []).map((category: InsightCategoryResponse) => ({
+          id: category.id,
+          title: category.title,
+          description: category.description,
+          sampleQuestions: category.sampleQuestions || [],
+          icon: getCategoryIcon(category.id)
+        }));
+
+        if (remoteCategories.length) {
+          setCategories(remoteCategories);
+        } else {
+          setCategories(DEFAULT_CATEGORIES);
+        }
+
+        setTopSkills(data.top_skills || []);
+      })
+      .catch(() => {
+        setCategories(DEFAULT_CATEGORIES);
+        setTopSkills([]);
+      });
+  }, [tenantReady, activeTenantId]);
+
+  const tenantDisplayName = useMemo(() => {
+    if (tenantInfo?.name) return tenantInfo.name;
+    if (tenantSource === 'query') return 'Guest Profile';
+    if (tenantSource === 'demo') return 'Demo Professional';
+    return 'ProfileGPT User';
+  }, [tenantInfo, tenantSource]);
+
+  const professionLabel = tenantInfo?.profession || 'AI-powered professional profile';
 
   const askQuestion = async (question: string) => {
     if (!question.trim() || isLoading) return;
@@ -111,15 +217,15 @@ export default function PersonalizedProfileGPT() {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/ask`, {
+      const response = await fetch(`${API_BASE}/ask`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          question: question,
-          mode: mode,
-          tenant_id: tenantId,
+          question,
+          mode,
+          tenant_id: activeTenantId,
         }),
       });
 
@@ -136,11 +242,10 @@ export default function PersonalizedProfileGPT() {
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
       console.error('Error asking question:', error);
-
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        text: 'Sorry, I encountered an error. Please make sure the backend server is running on localhost:8000.',
+        text: 'Sorry, I could not reach the API. Please verify the backend server is running and try again.',
         timestamp: new Date()
       };
 
@@ -156,7 +261,6 @@ export default function PersonalizedProfileGPT() {
 
   const handleCategoryClick = (category: DataCategory) => {
     setSelectedCategory(category.title);
-    // Automatically ask the first sample question
     if (category.sampleQuestions.length > 0) {
       askQuestion(category.sampleQuestions[0]);
     }
@@ -167,45 +271,112 @@ export default function PersonalizedProfileGPT() {
   };
 
   useEffect(() => {
-    // Auto-scroll to bottom when messages change
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages]);
 
-  // Welcome message
   useEffect(() => {
-    if (messages.length === 0) {
-      const welcomeMessage: Message = {
-        id: 'welcome',
-        role: 'assistant',
-        text: "Hi there! 👋 I'm Sagar's AI assistant. I can answer questions about his professional background, technical skills, projects, and experience. Click on any category on the left to get started, or just ask me anything!",
-        timestamp: new Date()
-      };
-      setMessages([welcomeMessage]);
+    if (!tenantReady || hasIntroMessage) return;
+
+    const subjectLabel = tenantInfo?.name
+      ? `${tenantInfo.name}'s`
+      : tenantSource === 'demo'
+        ? 'this demo'
+        : 'this';
+
+    const welcomeMessage: Message = {
+      id: 'welcome',
+      role: 'assistant',
+      text: `Hi there! 👋 I'm your AI portfolio assistant. Ask me anything about ${subjectLabel} professional background, experience, or education and I'll respond with recruiter-friendly highlights plus citations.`,
+      timestamp: new Date()
+    };
+    setMessages([welcomeMessage]);
+    setHasIntroMessage(true);
+  }, [tenantInfo, tenantSource, tenantReady, hasIntroMessage]);
+
+  const renderBoldText = (content: string) => {
+    const parts = content.split(/(\*\*.*?\*\*)/g);
+    return parts.map((part, index) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={index}>{part.slice(2, -2)}</strong>;
+      }
+      return <span key={index}>{part}</span>;
+    });
+  };
+
+  const renderMessageContent = (text: string) => {
+    const lines = text.split('\n').map(line => line.trim()).filter(Boolean);
+    const segments: Array<{ type: 'paragraph'; text: string } | { type: 'list'; items: string[] }> = [];
+    let currentList: string[] = [];
+
+    const flushList = () => {
+      if (currentList.length) {
+        segments.push({ type: 'list', items: currentList });
+        currentList = [];
+      }
+    };
+
+    lines.forEach(line => {
+      const isBullet = /^(\d+\.)|[-*•–]\s/.test(line);
+      if (isBullet) {
+        const cleaned = line.replace(/^(\d+\.)\s*|[-*•–]\s*/, '');
+        currentList.push(cleaned);
+      } else {
+        flushList();
+        segments.push({ type: 'paragraph', text: line });
+      }
+    });
+
+    flushList();
+
+    if (!segments.length) {
+      return (
+        <p className="leading-relaxed text-gray-900 text-base">{renderBoldText(text)}</p>
+      );
     }
-  }, []);
+
+    return segments.map((segment, index) =>
+      segment.type === 'paragraph' ? (
+        <p key={`p-${index}`} className="leading-relaxed text-gray-900 text-base mb-2">
+          {renderBoldText(segment.text)}
+        </p>
+      ) : (
+        <ul key={`list-${index}`} className="list-disc pl-5 space-y-1 text-gray-900 text-base mb-2">
+          {segment.items.map((item, itemIndex) => (
+            <li key={`li-${index}-${itemIndex}`}>{renderBoldText(item)}</li>
+          ))}
+        </ul>
+      )
+    );
+  };
+
+  const placeholder = tenantInfo?.name
+    ? `Ask about ${tenantInfo.name}'s experience, skills, or achievements...`
+    : 'Ask about this professional’s experience, skills, or achievements...';
 
   return (
-    <div className="flex h-screen w-full bg-gray-50">
+    <div className="flex h-screen w-full bg-slate-50">
       {/* Side Panel */}
       <aside className="w-80 bg-white border-r shadow-sm flex flex-col">
-        {/* Header */}
         <div className="p-6 border-b">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
-              <span className="text-white font-bold text-lg">S</span>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-lg">
+              {tenantDisplayName.charAt(0)}
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">Sagar's Profile</h2>
-              <p className="text-sm text-gray-600">Embedded Software Engineer</p>
+              <h2 className="text-xl font-semibold text-gray-900">{tenantDisplayName}</h2>
+              <p className="text-sm text-gray-600">{professionLabel}</p>
             </div>
           </div>
+          <div className="flex items-center gap-2 text-xs text-gray-500 bg-gray-100 rounded-lg p-3">
+            <ShieldCheck className="w-4 h-4 text-green-600" />
+            Responses include citations taken directly from your uploaded sources.
+          </div>
 
-          {/* Mode Selector */}
           <div className="mt-4">
             <label className="block text-xs font-medium text-gray-700 mb-2">
-              Response Style:
+              Response Style
             </label>
             <div className="flex gap-1">
               {(['short', 'detailed', 'star'] as const).map((modeOption) => (
@@ -223,19 +394,31 @@ export default function PersonalizedProfileGPT() {
               ))}
             </div>
           </div>
+
+          {topSkills.length > 0 && (
+            <div className="mt-4">
+              <p className="text-xs font-semibold text-gray-500 mb-1">Top strengths</p>
+              <div className="flex flex-wrap gap-2">
+                {topSkills.map(skill => (
+                  <span key={skill} className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs border border-gray-200">
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Data Categories */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           <h3 className="text-sm font-medium text-gray-700 mb-3">Explore Topics</h3>
-          {dataCategories.map((category, index) => (
+          {categories.map((category, index) => (
             <div key={index}>
               <button
                 onClick={() => handleCategoryClick(category)}
-                className={`w-full p-4 rounded-xl shadow-sm text-left transition-all hover:shadow-md ${
+                className={`w-full p-4 rounded-xl text-left transition-all border ${
                   selectedCategory === category.title
-                    ? 'bg-blue-50 border-2 border-blue-200'
-                    : 'bg-gray-50 hover:bg-gray-100'
+                    ? 'bg-blue-50 border-blue-200 shadow-sm'
+                    : 'bg-white border-gray-200 hover:shadow'
                 }`}
               >
                 <div className="flex items-start gap-3">
@@ -247,7 +430,6 @@ export default function PersonalizedProfileGPT() {
                 </div>
               </button>
 
-              {/* Sample Questions for Selected Category */}
               {selectedCategory === category.title && (
                 <div className="mt-2 ml-8 space-y-1">
                   {category.sampleQuestions.slice(1).map((question, qIndex) => (
@@ -256,7 +438,7 @@ export default function PersonalizedProfileGPT() {
                       onClick={() => handleSampleQuestionClick(question)}
                       className="block w-full text-left px-3 py-2 text-xs text-blue-600 hover:bg-blue-50 rounded-lg"
                     >
-                      "{question}"
+                      <span>&ldquo;{question}&rdquo;</span>
                     </button>
                   ))}
                 </div>
@@ -265,75 +447,106 @@ export default function PersonalizedProfileGPT() {
           ))}
         </div>
 
-        {/* Bottom Navigation */}
-        <div className="p-4 border-t">
-          <Link
-            href="/"
-            className="block w-full text-center px-4 py-2 text-sm text-gray-600 hover:text-blue-600 border border-gray-300 rounded-lg hover:border-blue-300 transition-colors"
-          >
-            ← Back to Simple Chat
-          </Link>
+        <div className="p-4 border-t space-y-2">
+          {tenantInfo ? (
+            <>
+              <Link
+                href="/dashboard"
+                className="block w-full text-center px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition"
+              >
+                Open Dashboard
+              </Link>
+              <Link
+                href="/"
+                className="block w-full text-center px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:border-blue-300 transition"
+              >
+                Back to Landing
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link
+                href="/login"
+                className="block w-full text-center px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition"
+              >
+                Log In to Manage
+              </Link>
+              <Link
+                href="/signup"
+                className="block w-full text-center px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:border-blue-300 transition"
+              >
+                Create Account
+              </Link>
+            </>
+          )}
         </div>
       </aside>
 
       {/* Chat Section */}
-      <main className="flex flex-col flex-1">
-        {/* Header */}
+      <main className="flex flex-col flex-1 bg-slate-50">
         <header className="px-6 py-4 border-b bg-white shadow-sm">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
-              <h1 className="text-lg font-medium text-gray-900">
-                Chat with Sagar's AI Assistant
+              <h1 className="text-lg font-semibold text-gray-900">
+                Chat with this AI Resume Assistant
               </h1>
               <p className="text-sm text-gray-600">
-                Ask anything about his professional background and experience
+                Ask anything about {tenantInfo?.name ? `${tenantInfo.name}'s` : 'this professional\'s'} experience, skills, or achievements.
               </p>
             </div>
             <div className="text-xs text-gray-500">
               Mode: <span className="font-medium">{mode}</span>
             </div>
           </div>
+          {!tenantInfo && tenantSource === 'demo' && (
+            <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 text-amber-900 text-sm px-4 py-2">
+              You&apos;re viewing the public demo. <Link href="/login" className="underline">Log in</Link> to chat with your own data.
+            </div>
+          )}
         </header>
 
-        {/* Chat Messages */}
         <div className="flex-1 p-6 overflow-y-auto space-y-4 flex flex-col">
           <div className="flex-1 space-y-4">
             {messages.map((msg) => (
               <div
                 key={msg.id}
-                className={`max-w-3xl p-4 rounded-2xl shadow-sm text-sm ${
+                className={`max-w-3xl p-5 rounded-2xl text-sm leading-relaxed ${
                   msg.role === 'user'
-                    ? 'bg-blue-600 text-white self-end ml-auto'
-                    : 'bg-white border'
+                    ? 'bg-blue-100 text-gray-900 border border-blue-200 self-end ml-auto shadow'
+                    : 'bg-white text-gray-900 border border-gray-200 shadow-sm'
                 }`}
               >
-                <div className="whitespace-pre-wrap">{msg.text}</div>
+                {renderMessageContent(msg.text)}
 
-                {/* Citations */}
                 {msg.citations && msg.citations.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-gray-200">
-                    <p className="text-xs font-medium text-gray-500 mb-2">Sources:</p>
-                    <div className="space-y-1">
-                      {msg.citations.map((citation, index) => (
-                        <div key={index} className="text-xs text-gray-600">
-                          [{citation.index}] {citation.title} - {citation.section}
-                        </div>
-                      ))}
-                    </div>
+                  <div className={`mt-4 flex flex-wrap gap-2 ${msg.role === 'user' ? 'text-gray-800' : 'text-gray-700'}`}>
+                    {msg.citations.map((citation) => (
+                      <span
+                        key={`${msg.id}-${citation.index}`}
+                        className={`inline-flex items-center rounded-full px-3 py-1 text-xs ${
+                          msg.role === 'user'
+                            ? 'bg-blue-200 text-blue-900 border border-blue-300'
+                            : 'bg-gray-100 text-gray-700 border border-gray-200'
+                        }`}
+                      >
+                        [{citation.index}] {citation.title}
+                        {citation.section ? ` • ${citation.section}` : ''}
+                      </span>
+                    ))}
                   </div>
                 )}
               </div>
             ))}
 
             {isLoading && (
-              <div className="max-w-3xl p-4 rounded-2xl bg-white border shadow-sm">
-                <div className="flex items-center space-x-2">
-                  <div className="animate-pulse flex space-x-1">
+              <div className="max-w-3xl p-4 rounded-2xl bg-white border border-gray-200 shadow-sm">
+                <div className="flex items-center space-x-2 text-gray-600 text-sm">
+                  <div className="flex space-x-1">
                     <div className="h-2 w-2 bg-gray-400 rounded-full animate-bounce"></div>
                     <div className="h-2 w-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
                     <div className="h-2 w-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                   </div>
-                  <span className="text-sm text-gray-500">Thinking...</span>
+                  <span>Preparing a recruiter-friendly response...</span>
                 </div>
               </div>
             )}
@@ -341,13 +554,12 @@ export default function PersonalizedProfileGPT() {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input Box */}
         <div className="p-4 border-t bg-white flex items-center gap-3">
           <input
-            className="flex-1 p-3 rounded-2xl border shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="flex-1 p-3 rounded-2xl border shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black placeholder-gray-500"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask about Sagar's experience, skills, projects..."
+            placeholder={placeholder}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();

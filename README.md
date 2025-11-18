@@ -1,6 +1,6 @@
 # ProfileGPT - AI-Powered Portfolio Chat System
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-brightgreen)](https://your-vercel-url.app)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-brightgreen)](https://personalgpt-projects.vercel.app)
 [![Backend API](https://img.shields.io/badge/API-PythonAnywhere-blue)](https://sagarbpatel31.pythonanywhere.com)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Cost](https://img.shields.io/badge/Cost-Free%20Forever-green)](README.md)
@@ -157,14 +157,15 @@ npm run dev                      # Start development server
 - **Main Interface**: http://localhost:3000
 - **User Dashboard**: http://localhost:3000/dashboard
 - **Create Account**: http://localhost:3000/signup
+- **Log In**: http://localhost:3000/login
 - **Widget Demo**: http://localhost:3000/widget-demo.html
 - **API Docs**: http://localhost:8000/docs
 
 ### **2. Create Your Account**
-1. Visit http://localhost:3000/signup
-2. Enter your name, email, profession
+1. Visit http://localhost:3000/signup (or return anytime via http://localhost:3000/login)
+2. Enter your name, email, profession, and a secure password
 3. Get your unique tenant ID and embed code
-4. Access your dashboard
+4. Access your dashboard after verifying your credentials
 
 ### **3. Upload Your Documents**
 1. Go to Dashboard → Upload Documents
@@ -202,6 +203,7 @@ ProfileGPT/
 │   ├── src/app/
 │   │   ├── page.tsx              # Main chat interface + landing
 │   │   ├── signup/page.tsx       # Account creation page
+│   │   ├── login/page.tsx        # Tenant login & verification
 │   │   └── dashboard/page.tsx    # User dashboard
 │   ├── public/
 │   │   ├── widget.js            # Embeddable chat widget

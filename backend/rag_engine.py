@@ -4,12 +4,100 @@ RAG (Retrieval-Augmented Generation) Engine for ProfileGPT
 import re
 import uuid
 from typing import List, Dict, Any, Optional, Tuple
+from collections import Counter
 from dataclasses import dataclass
 import time
 import numpy as np
 import hashlib
 
 from database import DatabaseManager, Document, Chunk
+
+KNOWN_SKILLS = {
+    "python": "Python",
+    "javascript": "JavaScript",
+    "typescript": "TypeScript",
+    "java": "Java",
+    "c++": "C++",
+    "c#": "C#",
+    "c": "C",
+    "go": "Go",
+    "golang": "Go",
+    "rust": "Rust",
+    "docker": "Docker",
+    "aws": "AWS",
+    "azure": "Azure",
+    "gcp": "GCP",
+    "react": "React",
+    "node": "Node.js",
+    "node.js": "Node.js",
+    "sql": "SQL",
+    "postgresql": "PostgreSQL",
+    "mongodb": "MongoDB",
+    "linux": "Linux"
+}
+
+PROFILE_TOPIC_TEMPLATES = [
+    {
+        "id": "technical",
+        "title": "Technical Skills",
+        "description": "Tools, languages, and frameworks in daily use",
+        "keywords": ["python", "c++", "java", "docker", "react", "node", "firmware", "linux"],
+        "sample_questions": [
+            "Which tools do you use most often?",
+            "How do you keep your technical stack current?"
+        ]
+    },
+    {
+        "id": "projects",
+        "title": "Projects & Impact",
+        "description": "Notable work and measurable outcomes",
+        "keywords": ["project", "delivered", "impact", "built", "developed", "achieved", "led"],
+        "sample_questions": [
+            "Share a project with business impact.",
+            "How do you measure project success?"
+        ]
+    },
+    {
+        "id": "ai_innovation",
+        "title": "AI & Innovation",
+        "description": "Automation, ML, and experimentation",
+        "keywords": ["ai", "ml", "machine", "learning", "model", "vision", "innovation", "automation", "slam"],
+        "sample_questions": [
+            "What AI/ML systems have you built?",
+            "Have you automated any workflows recently?"
+        ]
+    },
+    {
+        "id": "research",
+        "title": "Research & Publications",
+        "description": "Academic or research contributions",
+        "keywords": ["research", "publication", "paper", "scholar", "study"],
+        "sample_questions": [
+            "Tell me about your research focus.",
+            "Any publications or talks worth highlighting?"
+        ]
+    },
+    {
+        "id": "healthcare",
+        "title": "Healthcare & Life Sciences",
+        "description": "Clinical, biomedical, or pharma expertise",
+        "keywords": ["patient", "clinical", "medical", "health", "biomedical", "pharma"],
+        "sample_questions": [
+            "How have you impacted patient care?",
+            "Describe a healthcare project you led."
+        ]
+    },
+    {
+        "id": "mechanical",
+        "title": "Mechanical & Industrial",
+        "description": "Mechanical, manufacturing, or CAD experience",
+        "keywords": ["mechanical", "manufacturing", "cad", "solidworks", "thermal", "hardware design"],
+        "sample_questions": [
+            "What mechanical systems have you built?",
+            "How do you ensure manufacturability?"
+        ]
+    }
+]
 
 @dataclass
 class RAGResponse:
@@ -24,6 +112,24 @@ class MockLLM:
 
     def __init__(self):
         pass
+
+    def _extract_context_points(self, context: str, keywords: List[str], limit: int = 4) -> List[str]:
+        """Grab relevant sentences from context matching keywords"""
+        sentences = re.split(r'(?<=[.!?])\s+', context)
+        points = []
+
+        for sentence in sentences:
+            clean = sentence.strip()
+            if not clean:
+                continue
+            lower = clean.lower()
+            if any(keyword in lower for keyword in keywords):
+                if clean not in points:
+                    points.append(clean)
+            if len(points) >= limit:
+                break
+
+        return points
 
     def generate_response(self, question: str, context: str, mode: str = "detailed") -> str:
         """Generate a conversational response based on actual resume context"""
@@ -64,58 +170,97 @@ class MockLLM:
 
     def _analyze_python_skills(self, context: str, question: str, mode: str) -> str:
         """Analyze Python skills from resume context"""
-        if mode == "short":
-            return "Yes, I have 2+ years of professional Python experience at Cisco and R-Tek."
-        elif mode == "star":
-            return "Situation: Working as Embedded Software Engineer at Cisco Systems\nTask: Automate board health monitoring and testing\nAction: Developed Python scripts for automated testing pipelines and QA processes\nResult: Cut manual QA time significantly and enabled daily Linux image testing"
+        points = self._extract_context_points(context, ["python", "automation", "script", "pipeline"])
+        if not points:
+            points = [
+                "Automated hardware health checks and validation flows using Python scripting.",
+                "Connected firmware events to cloud dashboards through Python-based services.",
+                "Used Python ML stacks (PyTorch, Pandas, NumPy) for research prototypes."
+            ]
 
-        return ("Absolutely! I have strong Python experience from multiple professional roles:\n\n"
-                "• **Cisco Systems**: Used Python extensively to automate board health monitoring, cutting manual QA time and enabling daily Linux image testing pipelines\n\n"
-                "• **R-Tek (Current)**: Developing firmware-to-cloud communication protocols and automated testing frameworks using Python\n\n"
-                "• **AI/ML Research**: Applied Python with PyTorch, Pandas, and NumPy for deep learning projects like marine plastic debris detection using satellite imagery\n\n"
-                "• **Scope**: My Python skills span embedded systems automation, data processing, and machine learning applications")
+        if mode == "short":
+            return "Python is my daily driver for automation, backend services, and ML prototypes."
+        elif mode == "star":
+            return ("Situation: Needed faster quality feedback during Cisco board bring-up\n"
+                    "Task: Reduce manual QA cycles and capture telemetry data\n"
+                    "Action: Built Python pipelines that triggered tests, parsed logs, and published dashboards\n"
+                    "Result: Enabled daily CI-style validation and freed the hardware team from manual testing")
+
+        bullet_points = "\n".join([f"• {point}" for point in points])
+        return ("Here is how I apply Python:\n"
+                f"{bullet_points}\n"
+                "• Tooling: PyTorch, FastAPI, Pandas, NumPy, automation frameworks")
 
     def _analyze_experience(self, context: str, question: str, mode: str) -> str:
         """Analyze work experience from context"""
-        if mode == "short":
-            return "2+ years as Embedded Software Engineer at Cisco, currently Software Developer at R-Tek."
-        elif mode == "star":
-            return "Situation: Joined Cisco Systems as Embedded Software Engineer\nTask: Lead board bring-up and validation for next-gen enterprise switches\nAction: Developed C/C++ CLI tools, automated Python testing, collaborated across teams\nResult: Achieved high hardware feature verification rate and streamlined board bring-up process"
+        points = self._extract_context_points(
+            context,
+            ["embedded", "firmware", "iot", "research", "engineer", "led", "developed"]
+        )
 
-        return ("I'm an experienced Embedded Software Engineer with 2+ years at Cisco Systems and currently working as a Software Developer at R-Tek. "
-                "At Cisco, I led board bring-up and validation for next-generation enterprise switches, working with PHY, FPGA, PoE, and TPM components. I developed C/C++ CLI tools with real-time telemetry support and automated testing pipelines using Python. "
-                "Currently at R-Tek, I'm integrating embedded hardware modules like Raspberry Pi, STM32, and ESP32 with cloud services for IoT solutions. "
-                "I also have research experience as a Deep Learning Researcher at Omdena, where I developed ResAttUNet models for satellite imagery analysis. "
-                "My background combines embedded systems expertise with AI/ML research and cloud integration.")
+        if not points:
+            points = [
+                "Led embedded switch bring-up at Cisco, covering FPGA, PoE, and security modules.",
+                "Built firmware-to-cloud data paths for R-Tek IoT devices (Raspberry Pi, STM32, ESP32).",
+                "Collaborated on AI research projects translating ML outputs into production-ready tooling."
+            ]
+
+        if mode == "short":
+            return "Embedded engineer with Cisco + R-Tek experience blending firmware, automation, and AI research."
+        elif mode == "star":
+            return ("Situation: Owned validation for Cisco's next-gen enterprise switch platform\n"
+                    "Task: Ensure every board feature (PHY/FPGA/PoE) worked before release\n"
+                    "Action: Built diagnostic CLI tools, automated tests, and coordinated across silicon teams\n"
+                    "Result: Accelerated bring-up cycles and improved release confidence for the hardware org")
+
+        bullet_points = "\n".join([f"• {point}" for point in points])
+        return ("Experience snapshot:\n"
+                f"{bullet_points}\n"
+                "• Collaboration: cross-functional work with hardware, cloud, and research teams")
 
     def _analyze_technical_skills(self, context: str, question: str, mode: str) -> str:
         """Analyze technical skills from context"""
         if mode == "short":
-            return "C/C++, Python, embedded systems, Linux, AI/ML, IoT, and hardware integration."
+            return "Blend of C/C++, Python, embedded Linux, cloud integrations, and AI/ML tooling."
         elif mode == "star":
-            return "Situation: Working across embedded systems and AI domains\nTask: Master diverse technical stacks\nAction: Gained expertise in C/C++, Python, embedded systems, AI/ML frameworks\nResult: Successfully delivered projects spanning firmware, automation, and deep learning"
+            return ("Situation: Teams needed one engineer who could span firmware to AI\n"
+                    "Task: Deliver end-to-end solutions without handoffs between specialists\n"
+                    "Action: Became fluent in C/C++, Python, ROS, cloud services, and ML frameworks\n"
+                    "Result: Delivered projects like autonomous drones and IoT telemetry pipelines independently")
 
-        return ("I have a comprehensive technical skill set spanning multiple domains:\n\n"
-                "• **Programming Languages**: Python, C/C++, Bash scripting\n\n"
-                "• **Embedded Systems**: Raspberry Pi, Arduino, STM32, ESP32, Nvidia Jetson Nano, I2C, SPI, UART protocols\n\n"
-                "• **AI/ML Stack**: PyTorch, Pandas, Computer Vision, Deep Learning (UNet, Attention UNet), NumPy\n\n"
-                "• **Development Tools**: Eclipse IDE, VS Code, GDB, Git, Docker, CI/CD pipelines, MATLAB/Simulink\n\n"
-                "• **Operating Systems**: Strong Linux background with device drivers and system-level programming\n\n"
-                "My unique combination of embedded systems expertise and AI/ML knowledge allows me to work on cutting-edge projects like autonomous drones and IoT-cloud integration.")
+        return ("Technical strengths:\n"
+                "• Programming: Python, C/C++, Bash, ROS nodes, automation scripting\n"
+                "• Embedded: Raspberry Pi, STM32, ESP32, Nvidia Jetson, I2C/SPI/UART integrations\n"
+                "• AI/ML: PyTorch, computer vision (UNet, ResAttUNet), data prep with Pandas/NumPy\n"
+                "• Cloud & DevOps: API design with FastAPI, Dockerized services, CI/CD pipelines, observability dashboards\n"
+                "• Operating Systems: Linux bring-up, device drivers, low-level debugging with GDB/JTAG")
 
     def _analyze_projects(self, context: str, question: str, mode: str) -> str:
         """Analyze projects from context"""
-        if mode == "short":
-            return "Built autonomous GPS-less drone, marine plastic detection AI, and IoT cloud systems."
-        elif mode == "star":
-            return "Situation: Need for autonomous inspection drone without GPS\nTask: Develop complete autonomous navigation system\nAction: Implemented SLAM, path planning, obstacle avoidance using ROS and C++/Python\nResult: Successfully created drone with real-time UI-based goal navigation"
+        points = self._extract_context_points(
+            context,
+            ["project", "built", "developed", "designed", "research", "drone", "iot", "model"]
+        )
+        if not points:
+            points = [
+                "Autonomous drone platform with GPS-less navigation using Jetson Nano + SLAM.",
+                "Marine plastic detection model (ResAttUNet) delivering >80 IoU on satellite imagery.",
+                "Enterprise switch validation tooling (C/C++ CLI + automation) at Cisco.",
+                "IoT firmware-to-cloud telemetry stack spanning Raspberry Pi/STM32 hardware."
+            ]
 
-        return ("I've worked on several innovative projects combining embedded systems and AI:\n\n"
-                "• **Autonomous Drone Development**: Built a GPS-less inspection drone using Nvidia Jetson Nano and Intel RealSense T265, implementing SLAM, path planning, and obstacle avoidance with ROS\n\n"
-                "• **Marine Plastic Detection**: As a Deep Learning Researcher at Omdena, developed an optimized ResAttUNet model achieving 80+ IoU accuracy for detecting plastic debris in satellite imagery of Mediterranean seas\n\n"
-                "• **IoT Cloud Integration**: Currently developing firmware-to-cloud communication protocols for embedded modules, enabling real-time data acquisition and remote monitoring\n\n"
-                "• **Enterprise Switch Validation**: Led board bring-up for next-gen Cisco switches, developing CLI tools and automated testing frameworks\n\n"
-                "These projects showcase my ability to bridge hardware, software, and AI technologies.")
+        if mode == "short":
+            return "Delivered drones, ML research, and IoT telemetry platforms that link firmware to cloud analytics."
+        elif mode == "star":
+            return ("Situation: Needed autonomous inspection without GPS indoors\n"
+                    "Task: Build a fully autonomous drone platform\n"
+                    "Action: Implemented SLAM, visual odometry, and ROS navigation nodes across Jetson + T265 sensors\n"
+                    "Result: Drone executes missions via UI commands and avoids obstacles in real time")
+
+        bullet_points = "\n".join([f"• {point}" for point in points[:4]])
+        return ("Representative projects:\n"
+                f"{bullet_points}\n"
+                "Each project blends embedded hardware, AI models, and production-ready automation.")
 
     def _analyze_education(self, context: str, question: str, mode: str) -> str:
         """Analyze educational background"""
@@ -147,31 +292,55 @@ class MockLLM:
 
     def _analyze_ai_experience(self, context: str, question: str, mode: str) -> str:
         """Analyze AI/ML experience"""
-        if mode == "short":
-            return "Deep learning researcher with ResAttUNet models, PyTorch, and satellite imagery analysis."
-        elif mode == "star":
-            return "Situation: Need to detect marine plastic debris in satellite imagery\nTask: Develop accurate segmentation model\nAction: Created optimized ResAttUNet with PyTorch, curated Mediterranean dataset\nResult: Achieved 80+ IoU accuracy and contributed to open-source community"
+        points = self._extract_context_points(
+            context,
+            ["ai", "ml", "learning", "model", "vision", "drone", "slam", "automation"]
+        )
+        if not points:
+            points = [
+                "Developed ResAttUNet segmentation models (>80 IoU) for marine plastic detection with Omdena.",
+                "Implemented SLAM, obstacle avoidance, and sensor fusion for a Jetson-powered autonomous drone.",
+                "Automated telemetry and anomaly detection for embedded platforms using ML heuristics."
+            ]
 
-        return ("I have significant AI/ML experience, particularly in computer vision and deep learning:\n\n"
-                "• **Research Role**: Working as a Deep Learning Researcher at Omdena on marine plastic debris detection using satellite imagery\n\n"
-                "• **Model Development**: Developed and trained an optimized ResAttUNet deep learning model achieving over 80% IoU accuracy for binary segmentation\n\n"
-                "• **Data Engineering**: Curated Mediterranean-specific datasets by merging multiple sources (Litter Windrows, MARIDA), applied ACOLITE correction and class balancing techniques\n\n"
-                "• **Technical Stack**: Proficient with PyTorch, Pandas, NumPy, and computer vision libraries for deep learning applications\n\n"
-                "• **NVIDIA Certification**: Currently advancing my Generative AI and LLM expertise through NVIDIA certification programs\n\n"
-                "• **Autonomous Systems**: Applied AI in autonomous drone development, implementing SLAM and path planning algorithms\n\n"
-                "My AI background combines practical research experience with real-world applications in autonomous systems.")
+        if mode == "short":
+            return "AI/ML focus on computer vision, SLAM robotics, and ML-backed telemetry pipelines."
+        elif mode == "star":
+            return ("Situation: Environmental partners needed satellite-based plastic detection\n"
+                    "Task: Build a high-precision segmentation model\n"
+                    "Action: Curated Mediterranean datasets, optimized ResAttUNet, and deployed inference tooling\n"
+                    "Result: Delivered >80 IoU accuracy and operational dashboards used by the research team")
+
+        bullet_points = "\n".join([f"• {point}" for point in points[:4]])
+        return ("AI/ML contributions:\n"
+                f"{bullet_points}\n"
+                "• Stack: PyTorch, OpenCV, ROS, Pandas/NumPy, model evaluation + deployment workflows")
 
     def _generate_general_response(self, context: str, question: str, mode: str) -> str:
         """Generate a general response based on context"""
-        if mode == "short":
-            return "Based on my background, I can provide insights into embedded systems, AI/ML, and software development."
-        elif mode == "star":
-            return "Situation: Working across multiple technical domains\nTask: Provide comprehensive technical insights\nAction: Leverage experience in embedded systems, AI, and software development\nResult: Deliver well-rounded perspective on technology challenges"
+        points = self._extract_context_points(
+            context,
+            ["embedded", "cloud", "research", "ai", "project", "team", "automation"]
+        )
+        if not points:
+            points = [
+                "Embedded systems development at Cisco (board bring-up, firmware, diagnostics).",
+                "IoT firmware-to-cloud integrations at R-Tek (Raspberry Pi, STM32, ESP32).",
+                "Deep learning research via Omdena, focusing on computer vision and environmental data."
+            ]
 
-        return ("Based on my background as an Embedded Software Engineer with AI/ML research experience, I can provide insights across several technical domains. "
-                "My professional journey spans embedded systems development at Cisco, IoT cloud integration at R-Tek, and deep learning research at Omdena. "
-                "I'm particularly passionate about the convergence of embedded systems and AI, which I believe will drive the next generation of autonomous and intelligent systems. "
-                "Feel free to ask me about any specific aspects of my experience - whether it's embedded development, AI/ML projects, hardware integration, or my educational background!")
+        if mode == "short":
+            return "Blend of embedded engineering, AI/ML research, and IoT/cloud integration experience."
+        elif mode == "star":
+            return ("Situation: Career spans embedded hardware and AI projects\n"
+                    "Task: Provide reliable technical guidance across both domains\n"
+                    "Action: Led hardware validation, built automation pipelines, and shipped ML solutions\n"
+                    "Result: Deliver end-to-end insights from silicon to cloud + AI")
+
+        bullet_points = "\n".join([f"• {point}" for point in points[:4]])
+        return ("Background summary:\n"
+                f"{bullet_points}\n"
+                "Happy to dive deeper into any of these areas.")
 
     def _friendly_no_context_response(self, question: str, mode: str) -> str:
         """Provide a friendly response when no context is available"""
@@ -467,6 +636,28 @@ class RAGEngine:
         """Main RAG query method"""
         start_time = time.time()
 
+        # Check if this is a direct skill rating request
+        skill_name = self._detect_skill_question(question, tenant_id)
+        if skill_name:
+            skill_info = self.check_skill(skill_name, tenant_id)
+            if skill_info.get('has_skill'):
+                answer, citations, sources = self._build_skill_answer(skill_name, skill_info)
+            else:
+                answer = f"I couldn't find documented evidence for {skill_name}. Please upload projects or resumes that mention this skill."
+                citations = []
+                sources = []
+
+            latency_ms = int((time.time() - start_time) * 1000)
+            self.db.log_query(tenant_id, question, answer, mode, latency_ms)
+
+            return RAGResponse(
+                answer=answer,
+                citations=citations,
+                sources=sources,
+                latency_ms=latency_ms,
+                mode=mode
+            )
+
         # 1. Search and retrieve relevant chunks
         scored_chunks = self.search_and_rank(question, tenant_id)
 
@@ -527,6 +718,136 @@ class RAGEngine:
             mode=mode
         )
 
+    def _detect_skill_question(self, question: str, tenant_id: str) -> Optional[str]:
+        """Heuristically determine if a question is seeking a skill rating."""
+        triggers = ["skill", "rate", "rating", "scale", "level", "proficiency", "competency", "strength"]
+        question_lower = question.lower()
+
+        if not any(trigger in question_lower for trigger in triggers):
+            return None
+
+        skill_map = {name.lower(): name for name in self.db.get_tenant_skill_names(tenant_id)}
+        for key, value in KNOWN_SKILLS.items():
+            skill_map.setdefault(key, value)
+
+        for skill_key in sorted(skill_map.keys(), key=len, reverse=True):
+            if skill_key and skill_key in question_lower:
+                return skill_map[skill_key]
+
+        return None
+
+    def _build_skill_answer(
+        self,
+        skill_name: str,
+        skill_info: Dict[str, Any]
+    ) -> Tuple[str, List[Dict[str, Any]], List[Dict[str, Any]]]:
+        """Format a verified response for skill-related questions."""
+        confidence = skill_info.get('confidence') or 0.0
+        confidence_pct = int(max(confidence, 0.0) * 100)
+        evidence_list = skill_info.get('evidence', [])
+
+        if not evidence_list:
+            answer = f"I couldn't find direct document references for {skill_name}. Upload additional evidence to improve this skill profile."
+            return answer, [], []
+
+        lines = [
+            f"**Skill Requested:** {skill_name}",
+            f"**Confidence Estimate:** {confidence_pct}% based on documented experience.",
+            "Key evidence:"
+        ]
+
+        citations: List[Dict[str, Any]] = []
+        sources: List[Dict[str, Any]] = []
+
+        for idx, evidence in enumerate(evidence_list, start=1):
+            snippet = (evidence.get('text') or '').strip()
+            snippet = re.sub(r'\s+', ' ', snippet)
+            source_title = evidence.get('title') or "Document"
+            section = evidence.get('section') or "Experience"
+            chunk_id = evidence.get('chunk_id') or f"skill-{skill_name.lower()}-{idx}"
+
+            lines.append(f"- {source_title} – {snippet[:220]} [{idx}]")
+
+            citations.append({
+                "index": idx,
+                "title": source_title,
+                "section": section,
+                "url": evidence.get('url'),
+                "chunk_id": chunk_id
+            })
+
+            sources.append({
+                "chunk_id": chunk_id,
+                "title": source_title,
+                "section": section,
+                "source_type": evidence.get('source_type', 'resume'),
+                "url": evidence.get('url'),
+                "text_preview": snippet[:200] + ("..." if len(snippet) > 200 else "")
+            })
+
+        answer = "\n".join(lines)
+        return answer, citations, sources
+
     def check_skill(self, skill_name: str, tenant_id: str = "demo-tenant") -> Dict[str, Any]:
         """Check if a skill exists and return evidence"""
         return self.db.get_skill_evidence(skill_name, tenant_id)
+
+    def generate_profile_insights(self, tenant_id: str) -> Dict[str, Any]:
+        """Provide dynamic topics / skills for personalized UI"""
+        documents = self.db.get_tenant_documents(tenant_id)
+        if not documents:
+            return {
+                "categories": PROFILE_TOPIC_TEMPLATES[:3],
+                "top_skills": [],
+                "documents": 0
+            }
+
+        topic_scores = {template['id']: 0 for template in PROFILE_TOPIC_TEMPLATES}
+        skill_counter: Counter = Counter()
+
+        for doc in documents:
+            chunks = self.db.get_document_chunks(doc.id)
+            for chunk in chunks:
+                tags = chunk.tags or {}
+                for skill in tags.get('skills', []):
+                    if skill:
+                        skill_counter[skill.lower()] += 1
+
+                text_lower = chunk.text.lower()
+                for template in PROFILE_TOPIC_TEMPLATES:
+                    if any(keyword in text_lower for keyword in template['keywords']):
+                        topic_scores[template['id']] += 1
+
+        sorted_topics = sorted(
+            PROFILE_TOPIC_TEMPLATES,
+            key=lambda template: topic_scores.get(template['id'], 0),
+            reverse=True
+        )
+        categories = [
+            {
+                "id": template['id'],
+                "title": template['title'],
+                "description": template['description'],
+                "sampleQuestions": template['sample_questions']
+            }
+            for template in sorted_topics
+            if topic_scores.get(template['id'], 0) > 0
+        ]
+
+        if not categories:
+            categories = [
+                {
+                    "id": template['id'],
+                    "title": template['title'],
+                    "description": template['description'],
+                    "sampleQuestions": template['sample_questions']
+                }
+                for template in PROFILE_TOPIC_TEMPLATES[:3]
+            ]
+
+        top_skills = [skill.title() for skill, _ in skill_counter.most_common(6)]
+
+        return {
+            "categories": categories[:5],
+            "top_skills": top_skills
+        }

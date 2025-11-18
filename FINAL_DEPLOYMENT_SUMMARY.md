@@ -133,14 +133,14 @@ curl -X POST https://sagarbpatel31.pythonanywhere.com/ingest \
 ### **Professional Profiles**
 - **LinkedIn**: Add Vercel URL to "Contact Info" → Website
 - **GitHub**: Include in README and repository description
-- **Resume**: Add as "Interactive Portfolio: your-vercel-url.app"
+- **Resume**: Add as "Interactive Portfolio: personalgpt-projects.vercel.app"
 - **Email Signature**: "Learn more about me: Chat with my AI assistant"
 
 ### **Job Applications**
 ```
 P.S. I've created an AI assistant that can answer questions about my background and experience.
 
-Try it here: https://your-vercel-url.app
+Try it here: https://personalgpt-projects.vercel.app
 
 Sample questions: "What Python projects has [Your Name] worked on?" or "Tell me about their machine learning experience."
 ```
@@ -151,7 +151,7 @@ Sample questions: "What Python projects has [Your Name] worked on?" or "Tell me 
 
 Recruiters can now chat with an AI version of me to learn about my experience, skills, and projects.
 
-Try asking about my [Your Specialty] skills: https://your-vercel-url.app
+Try asking about my [Your Specialty] skills: https://personalgpt-projects.vercel.app
 
 #AI #TechJobs #Portfolio #Innovation
 ```

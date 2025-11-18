@@ -20,6 +20,7 @@ load_dotenv()
 # Initialize database and RAG engine
 db_manager = DatabaseManager()
 rag_engine = RAGEngine(db_manager)
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
 app = FastAPI(
     title="ProfileGPT API",
@@ -359,8 +360,13 @@ async def get_tenant_documents(tenant_id: str):
 class TenantCreateRequest(BaseModel):
     name: str
     email: str
+    password: str
     profession: Optional[str] = None
     bio: Optional[str] = None
+
+class TenantLoginRequest(BaseModel):
+    email: str
+    password: str
 
 @app.post("/tenant")
 async def create_tenant(request: TenantCreateRequest):
@@ -368,22 +374,51 @@ async def create_tenant(request: TenantCreateRequest):
     Create a new tenant workspace
     """
     try:
-        tenant_id = f"tenant_{str(uuid.uuid4())[:8]}"
-        api_key = f"pk_{tenant_id}_{str(uuid.uuid4())[:16]}"
-
-        # In a real implementation, save to database
-        # For now, just return the tenant info
+        tenant_info = db_manager.create_tenant_account(
+            name=request.name,
+            email=request.email,
+            password=request.password,
+            profession=request.profession,
+            bio=request.bio
+        )
 
         return {
-            "tenant_id": tenant_id,
-            "name": request.name,
-            "email": request.email,
-            "profession": request.profession,
-            "bio": request.bio,
-            "api_key": api_key,
-            "embed_code": f'<script src="http://localhost:3000/widget.js" data-tenant="{tenant_id}"></script>',
-            "chat_url": f"http://localhost:3000?tenant={tenant_id}"
+            **tenant_info,
+            "embed_code": f'<script src="{FRONTEND_URL}/widget.js" data-tenant="{tenant_info["tenant_id"]}"></script>',
+            "chat_url": f"{FRONTEND_URL}?tenant={tenant_info['tenant_id']}"
         }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/tenant/login")
+async def tenant_login(request: TenantLoginRequest):
+    """
+    Authenticate an existing tenant
+    """
+    try:
+        tenant = db_manager.verify_tenant_credentials(request.email, request.password)
+        if not tenant:
+            raise HTTPException(status_code=401, detail="Invalid email or password.")
+
+        return {
+            **tenant,
+            "embed_code": f'<script src="{FRONTEND_URL}/widget.js" data-tenant="{tenant["tenant_id"]}"></script>',
+            "chat_url": f"{FRONTEND_URL}?tenant={tenant['tenant_id']}"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/tenant/{tenant_id}/insights")
+async def tenant_insights(tenant_id: str):
+    """
+    Provide profile-specific topic recommendations and skills
+    """
+    try:
+        return rag_engine.generate_profile_insights(tenant_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -408,7 +443,7 @@ async def create_demo_data():
     - Technologies: Node.js, MongoDB, React, TypeScript, Git
 
     SKILLS:
-    Programming: Python, JavaScript, TypeScript, Java, Go
+    Programming: Python, C/C++, JavaScript, TypeScript, Java, Go
     Frameworks: FastAPI, Django, React, Node.js, Express
     Databases: PostgreSQL, MongoDB, Redis, MySQL
     Cloud: AWS (EC2, S3, Lambda), Docker, Kubernetes
