@@ -1,21 +1,15 @@
 {
   "version": 2,
   "buildCommand": "npm run build",
-  "devCommand": "npm run dev",
   "installCommand": "npm install",
   "framework": "nextjs",
-  "functions": {
-    "app/api/**/*": {
-      "maxDuration": 30
-    }
-  },
   "regions": ["iad1"],
   "env": {
-    "NEXT_PUBLIC_API_URL": "@backend_api_url"
+    "NEXT_PUBLIC_API_URL": "https://sagarbpatel31.pythonanywhere.com"
   },
   "build": {
     "env": {
-      "NEXT_PUBLIC_API_URL": "@backend_api_url"
+      "NEXT_PUBLIC_API_URL": "https://sagarbpatel31.pythonanywhere.com"
     }
   }
 }
