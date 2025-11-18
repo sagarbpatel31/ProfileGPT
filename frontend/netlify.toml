@@ -1,0 +1,21 @@
+[build]
+  publish = "out"
+  command = "npm ci && npm run build"
+
+[build.environment]
+  NODE_VERSION = "18"
+  NPM_VERSION = "9"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[context.production.environment]
+  NEXT_PUBLIC_API_URL = "https://sagarbpatel31.pythonanywhere.com"
+
+[context.deploy-preview.environment]
+  NEXT_PUBLIC_API_URL = "https://sagarbpatel31.pythonanywhere.com"
+
+[context.branch-deploy.environment]
+  NEXT_PUBLIC_API_URL = "https://sagarbpatel31.pythonanywhere.com"
