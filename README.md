@@ -1,6 +1,13 @@
 # 🚀 ProfileGPT - AI-Powered Professional Portfolio
 
-**PProfileGPT** is a complete **AI-powered professional portfolio system** that lets visitors chat with your professional background and experience using **Retrieval-Augmented Generation (RAG)**. It provides intelligent, cited answers from your resume, portfolio, and documents.
+**ProfileGPT** is a complete **AI-powered professional portfolio system** that lets visitors chat with your professional background and experience using **Retrieval-Augmented Generation (RAG)**. It provides intelligent, cited answers from your resume, portfolio, and documents.
+
+## 🌐 **LIVE DEPLOYMENT**
+
+✅ **Frontend**: https://dashing-torrone-daca26.netlify.app
+✅ **Backend API**: https://sagarbpatel31.pythonanywhere.com
+✅ **Personalized Chat**: https://dashing-torrone-daca26.netlify.app/personalized
+✅ **Cost**: **$0/month** (Completely Free Forever!)
 
 ## ✨ **What Makes ProfileGPT Special**
 
@@ -27,7 +34,10 @@ User/Recruiter → Frontend (Next.js) → Backend API (FastAPI) → RAG Engine �
 - **Backend**: FastAPI + Python + Uvicorn
 - **Database**: SQLite (local file, no cloud costs)
 - **AI**: Mock LLM + embeddings (no API fees)
-- **Deployment**: Railway + Vercel (free tiers available)
+- **Deployment**:
+  - **Frontend**: Netlify (Free Forever)
+  - **Backend**: PythonAnywhere (Free Forever)
+  - **Total Cost**: $0/month
 
 ### **Production Upgrade Options**
 - **Database**: Supabase (PostgreSQL + pgvector)
@@ -278,11 +288,11 @@ CHUNK_OVERLAP=200
 
 ## 🚢 **Deployment Options**
 
-### **Option A: Free Hosting**
-- **Backend**: Railway (free tier)
-- **Frontend**: Vercel (free tier)
-- **Database**: Supabase (free tier)
-- **Total Cost**: $0/month
+### **Option A: Free Hosting (CURRENTLY DEPLOYED)**
+- **Backend**: PythonAnywhere (free tier) ✅ LIVE
+- **Frontend**: Netlify (free tier) ✅ LIVE
+- **Database**: SQLite (included)
+- **Total Cost**: $0/month ✅ RUNNING
 
 ### **Option B: Professional**
 - **Backend**: Railway Pro ($5/month)
