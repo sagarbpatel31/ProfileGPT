@@ -12,6 +12,11 @@ import hashlib
 
 from database import DatabaseManager, Document, Chunk
 
+try:
+    from sentence_transformers import SentenceTransformer
+except ImportError:
+    SentenceTransformer = None
+
 KNOWN_SKILLS = {
     "python": "Python",
     "javascript": "JavaScript",
@@ -436,6 +441,27 @@ class MockEmbedding:
         """Calculate cosine similarity between embeddings"""
         return np.dot(embedding1, embedding2)
 
+
+class TransformerEmbedding:
+    """SentenceTransformer-backed embeddings for higher-quality retrieval."""
+
+    def __init__(self, model_name: str = "sentence-transformers/all-MiniLM-L6-v2"):
+        if not SentenceTransformer:
+            raise RuntimeError("sentence-transformers is not installed")
+        self.model_name = model_name
+        self.model = SentenceTransformer(model_name)
+        self.dimension = self.model.get_sentence_embedding_dimension()
+
+    def encode(self, text: str) -> np.ndarray:
+        """Return normalized embedding for the given text."""
+        embedding = self.model.encode(text, normalize_embeddings=True)
+        if isinstance(embedding, list):
+            embedding = np.array(embedding)
+        return embedding.astype(np.float32)
+
+    def similarity(self, embedding1: np.ndarray, embedding2: np.ndarray) -> float:
+        return float(np.dot(embedding1, embedding2))
+
 class ProfileInsightsCache:
     """Simple cache with TTL for tenant insights so we don't rescan documents each request."""
 
@@ -463,7 +489,15 @@ class RAGEngine:
     def __init__(self, db_manager: DatabaseManager):
         self.db = db_manager
         self.llm = MockLLM()
-        self.embedding_model = MockEmbedding()
+        if SentenceTransformer:
+            try:
+                self.embedding_model = TransformerEmbedding()
+                print(f"✅ Using SentenceTransformer embeddings ({self.embedding_model.model_name})")
+            except Exception as e:
+                print(f"⚠️  Failed to load SentenceTransformer ({e}), using mock embeddings.")
+                self.embedding_model = MockEmbedding()
+        else:
+            self.embedding_model = MockEmbedding()
         self.insights_cache = ProfileInsightsCache()
 
     def chunk_text(self, text: str, chunk_size: int = 800, overlap: int = 200) -> List[str]:

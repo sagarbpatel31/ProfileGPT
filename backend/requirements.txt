@@ -17,3 +17,6 @@ python-docx==1.1.2
 # Standard library extensions
 python-dotenv==1.1.1
 pydantic==2.11.7
+
+# Local embeddings / model stack
+sentence-transformers==3.0.1

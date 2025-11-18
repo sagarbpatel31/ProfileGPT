@@ -238,6 +238,8 @@ ProfileGPT/
 
 ### **Document Management**
 - `POST /ingest` - Upload and process documents
+- `POST /ingest/text` - Ingest raw text (handy for regression/automation)
+- `POST /ingest/url` - Scrape and ingest a public profile
 - `GET /ingest/{job_id}` - Check processing status
 - `GET /sources/{chunk_id}` - Get source content
 
@@ -290,6 +292,11 @@ Text → NER → Keywords → Evidence → Confidence → Fast Lookup
 - **Short**: Brief, direct answers
 - **Detailed**: Comprehensive explanations
 - **STAR**: Situation-Task-Action-Result format
+
+### **Upgrading the Model Stack**
+- `backend/rag_engine.py` now loads `sentence-transformers/all-MiniLM-L6-v2` automatically when the dependency is installed (see `backend/requirements.txt`). This produces 384-dim embeddings for far better retrieval.
+- If the library isn’t available, the engine falls back to the deterministic mock embeddings so development still works offline.
+- You can swap in Supabase/OpenAI by wiring up the implementations under `backend/app/` once you provide real API keys.
 
 ---
 
