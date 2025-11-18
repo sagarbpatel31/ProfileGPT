@@ -1,49 +1,74 @@
-# 🚀 ProfileGPT - AI-Powered Professional Portfolio
+# ProfileGPT - AI-Powered Portfolio Chat System
 
-**ProfileGPT** is a complete **AI-powered professional portfolio system** that lets visitors chat with your professional background and experience using **Retrieval-Augmented Generation (RAG)**. It provides intelligent, cited answers from your resume, portfolio, and documents.
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-brightgreen)](https://your-vercel-url.app)
+[![Backend API](https://img.shields.io/badge/API-PythonAnywhere-blue)](https://sagarbpatel31.pythonanywhere.com)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Cost](https://img.shields.io/badge/Cost-Free%20Forever-green)](README.md)
+
+**ProfileGPT** transforms static portfolios into **interactive AI chat experiences**. Recruiters and collaborators can ask natural language questions about your professional background and receive accurate, cited answers from your documents.
 
 ## 🌐 **LIVE DEPLOYMENT**
 
-✅ **Frontend**: https://dashing-torrone-daca26.netlify.app
-✅ **Backend API**: https://sagarbpatel31.pythonanywhere.com
-✅ **Personalized Chat**: https://dashing-torrone-daca26.netlify.app/personalized
-✅ **Cost**: **$0/month** (Completely Free Forever!)
+✅ **Frontend**: Deployed on Vercel (100% Free)
+✅ **Backend API**: https://sagarbpatel31.pythonanywhere.com (100% Free)
+✅ **Total Cost**: **$0/month Forever** 🎉
 
-## ✨ **What Makes ProfileGPT Special**
+## 🚀 **What ProfileGPT Does**
 
-🤖 **Intelligent Q&A**: Answers questions about your background using RAG technology
-📚 **Source Citations**: Every response includes citations from your documents
-🌐 **Embeddable Widget**: Add to any website with one line of code
-⚡ **100% FREE Option**: Runs entirely on local/free services
-🎯 **Multi-Tenant**: Host multiple professional profiles
-📱 **Mobile Ready**: Responsive design works everywhere
+ProfileGPT creates an **intelligent AI assistant** that knows everything about your professional background. Instead of recruiters reading through resumes, they can:
+
+- **Ask Natural Questions**: "What are their Python skills?" or "Tell me about their React projects"
+- **Get Cited Answers**: Every response includes exact sources and evidence from uploaded documents
+- **Verify Skills Quickly**: Fast lookups with confidence scores for specific technologies
+- **Access 24/7**: Works around the clock without human intervention
+
+### **Example Interaction**
+```
+User: "What machine learning experience do they have?"
+
+ProfileGPT: "I have extensive machine learning experience including:
+
+• Built recommendation systems using TensorFlow and scikit-learn at TechCorp
+• Developed NLP models for sentiment analysis processing 100K+ documents
+• Implemented computer vision solutions for automated quality control
+
+Sources: Resume Section 2.1, Portfolio Project #3
+Confidence: 94%"
+```
 
 ---
 
 ## 🏗️ **System Architecture**
 
 ```
-User/Recruiter → Frontend (Next.js) → Backend API (FastAPI) → RAG Engine → SQLite Database
-                      ↕                      ↕                    ↕            ↕
-              Chat Interface          Document Upload        Text Chunking   Vector Store
-              Widget Integration      Skills Extraction     Embeddings      Citations
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   Frontend      │    │   Backend API    │    │   Database      │
+│   (Next.js)     │◄──►│   (FastAPI)      │◄──►│   (SQLite)      │
+│                 │    │                  │    │                 │
+│ • Chat Interface│    │ • RAG Engine     │    │ • Documents     │
+│ • Professional │    │ • Vector Search  │    │ • Text Chunks   │
+│   UI/UX        │    │ • Citations      │    │ • Embeddings    │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+         │                        │                        │
+         │              ┌──────────────────┐               │
+         └──────────────►│   Deployment     │◄──────────────┘
+                        │                  │
+                        │ • Vercel (Free)  │
+                        │ • PythonAnywhere │
+                        │ • Global CDN     │
+                        └──────────────────┘
 ```
 
 ### **Tech Stack (100% Free)**
-- **Frontend**: Next.js 16 + React + Tailwind CSS + TypeScript
-- **Backend**: FastAPI + Python + Uvicorn
-- **Database**: SQLite (local file, no cloud costs)
-- **AI**: Mock LLM + embeddings (no API fees)
-- **Deployment**:
-  - **Frontend**: Netlify (Free Forever)
-  - **Backend**: PythonAnywhere (Free Forever)
-  - **Total Cost**: $0/month
 
-### **Production Upgrade Options**
-- **Database**: Supabase (PostgreSQL + pgvector)
-- **AI**: OpenAI API, Groq, or local Ollama
-- **Storage**: AWS S3 or Supabase Storage
-- **Observability**: Langfuse for tracing
+| Component | Technology | Why Chosen | Cost |
+|-----------|------------|------------|----- |
+| **Frontend** | Next.js 16 + Tailwind | Server-side rendering, professional UI | $0 |
+| **Backend** | FastAPI + Python | Fast async processing, auto API docs | $0 |
+| **Database** | SQLite | Zero-config, file-based, perfect for portfolios | $0 |
+| **AI/RAG** | Mock implementations | No API costs, easily upgradeable | $0 |
+| **Deployment** | Vercel + PythonAnywhere | Global CDN, 99.9% uptime | $0 |
+| **Total** | **Complete System** | **Production Ready** | **$0/month** |
 
 ---
 

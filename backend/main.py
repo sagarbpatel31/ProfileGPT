@@ -67,6 +67,14 @@ class URLIngestRequest(BaseModel):
     title: Optional[str] = None
     tenant_id: Optional[str] = "demo-tenant"
 
+# Root endpoint
+@app.get("/")
+async def root():
+    return {
+        "message": "ProfileGPT API is running",
+        "status": "ok"
+    }
+
 # Health check
 @app.get("/health")
 async def health_check():
