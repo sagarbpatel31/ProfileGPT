@@ -498,6 +498,7 @@ async def process_multiple_chunks(chunks: List[str]) -> List[Embedding]:
 - ✅ No API rate limits
 - ✅ Easy to replace with real models
 - ✅ Demonstrates system capabilities
+- 🔄 Set `OPENAI_API_KEY` (and optionally `LLM_PROVIDER=openai`) to switch to the OpenAI-backed responder, or set `LLM_PROVIDER=hf` to run a local HuggingFace model like `google/flan-t5-base` entirely for free.
 
 ### **Why FastAPI over Flask/Django?**
 - ✅ Automatic API documentation

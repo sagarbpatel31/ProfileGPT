@@ -296,7 +296,8 @@ Text → NER → Keywords → Evidence → Confidence → Fast Lookup
 ### **Upgrading the Model Stack**
 - `backend/rag_engine.py` now loads `sentence-transformers/all-MiniLM-L6-v2` automatically when the dependency is installed (see `backend/requirements.txt`). This produces 384-dim embeddings for far better retrieval.
 - If the library isn’t available, the engine falls back to the deterministic mock embeddings so development still works offline.
-- You can swap in Supabase/OpenAI by wiring up the implementations under `backend/app/` once you provide real API keys.
+- Provide `OPENAI_API_KEY` (and optional `OPENAI_MODEL`) to turn on the OpenAI-backed LLM for richer, more contextual answers; otherwise, it keeps using the mock heuristic model.
+- Prefer `LLM_PROVIDER=hf` to run an entirely local HuggingFace model (defaults to `google/flan-t5-base`) for a zero-cost but higher-quality option than the heuristic model.
 
 ---
 
@@ -305,16 +306,39 @@ Text → NER → Keywords → Evidence → Confidence → Fast Lookup
 ### **Free Mode (Default)**
 ```env
 DATABASE_URL=sqlite:///./profilegpt.db
-OPENAI_API_KEY=sk-demo-key-placeholder  # Mock LLM
 USE_SQLITE=true
+LLM_PROVIDER=mock  # Force heuristic responses / silence OpenAI warnings
 ```
 
 ### **Production Mode**
 ```env
 DATABASE_URL=postgresql://user:pass@host:5432/db
 OPENAI_API_KEY=sk-real-api-key-here
+OPENAI_MODEL=gpt-4o-mini
+LLM_PROVIDER=openai
 SUPABASE_URL=https://your-project.supabase.co
 ```
+
+### **Local (Free) HuggingFace Mode**
+```env
+DATABASE_URL=sqlite:///./profilegpt.db
+LLM_PROVIDER=hf
+HF_LLM_MODEL=google/flan-t5-base  # default if unset
+```
+Requires installing from `backend/requirements.txt` (already brings `transformers` + `torch` via `sentence-transformers`). This mode keeps everything on your machine and avoids API costs.
+
+### **Enable OpenAI-Powered Responses (Optional)**
+1. `cd backend && pip install -r requirements.txt` (installs the `openai` SDK).
+2. Create `.env` with `OPENAI_API_KEY=sk-your-real-key`, optionally override `OPENAI_MODEL`, `OPENAI_TEMPERATURE`, or `OPENAI_MAX_TOKENS`.
+3. Set `LLM_PROVIDER=openai` (or leave unset – the backend now auto-detects the API key).
+4. Restart the FastAPI server (`uvicorn main:app --reload`).
+
+### **Enable Local HuggingFace Responses (Free)**
+1. `cd backend && pip install -r requirements.txt` (already includes `sentence-transformers`/`transformers`).
+2. Create `.env` with `LLM_PROVIDER=hf` and optionally `HF_LLM_MODEL=google/flan-t5-base` (or any seq2seq/chat model that fits on your machine).
+3. Restart the backend server. First request will download the model; subsequent responses stay offline and free.
+
+If no provider initializes successfully the service falls back to the heuristic `MockLLM`, so local/free setups continue to work without changes.
 
 ### **Deployment Variables**
 ```env

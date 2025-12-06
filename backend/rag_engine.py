@@ -1,6 +1,7 @@
 """
 RAG (Retrieval-Augmented Generation) Engine for ProfileGPT
 """
+import os
 import re
 import uuid
 from typing import List, Dict, Any, Optional, Tuple
@@ -10,12 +11,38 @@ import time
 import numpy as np
 import hashlib
 
+try:
+    from openai import OpenAI
+except ImportError:
+    OpenAI = None
+
+try:
+    import anthropic
+except ImportError:
+    anthropic = None
+
+try:
+    import cohere
+except ImportError:
+    cohere = None
+
 from database import DatabaseManager, Document, Chunk
 
 try:
     from sentence_transformers import SentenceTransformer
 except ImportError:
     SentenceTransformer = None
+
+try:
+    from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+except ImportError:
+    AutoTokenizer = None
+    AutoModelForSeq2SeqLM = None
+
+try:
+    import torch
+except ImportError:
+    torch = None
 
 KNOWN_SKILLS = {
     "python": "Python",
@@ -154,6 +181,7 @@ class MockLLM:
                         "sentence": clean,
                         "title": chunk.get("title", "Document"),
                         "section": chunk.get("section"),
+                        "chunk_text": text
                     })
                     match_added = True
                     break
@@ -162,13 +190,27 @@ class MockLLM:
                 summaries.append({
                     "sentence": sentences[0].strip(),
                     "title": chunk.get("title", "Document"),
-                    "section": chunk.get("section")
+                    "section": chunk.get("section"),
+                    "chunk_text": text
                 })
 
             if len(summaries) >= limit:
                 break
 
         return summaries[:limit]
+
+    def _find_keyword_evidence(self, summaries: List[Dict[str, str]], keywords: List[str], limit: int = 4) -> List[str]:
+        matches: List[str] = []
+        for summary in summaries:
+            chunk_text = summary.get("chunk_text") or summary.get("sentence", "")
+            sentences = re.split(r'(?<=[.!?])\s+', chunk_text)
+            for sentence in sentences:
+                if any(keyword in sentence.lower() for keyword in keywords):
+                    matches.append(f"{summary['title']}: {sentence.strip()}")
+                    break
+            if len(matches) >= limit:
+                break
+        return matches
 
     def generate_response(self, question: str, chunks: List[Dict[str, Any]], mode: str = "detailed") -> str:
         """Generate a conversational response based on actual resume context"""
@@ -189,7 +231,10 @@ class MockLLM:
         elif any(keyword in question_lower for keyword in ["experience", "work", "job", "career", "background"]):
             return self._analyze_experience(summaries, question, mode)
 
-        elif any(keyword in question_lower for keyword in ["skills", "technologies", "tech", "tools"]):
+        elif "tool" in question_lower or "stack" in question_lower or "use daily" in question_lower:
+            return self._analyze_tool_stack(summaries, question, mode)
+
+        elif any(keyword in question_lower for keyword in ["skills", "technologies", "tech"]):
             return self._analyze_technical_skills(summaries, question, mode)
 
         elif any(keyword in question_lower for keyword in ["projects", "built", "developed", "created"]):
@@ -286,6 +331,25 @@ class MockLLM:
         bullet_points = "\n".join([f"• {point}" for point in raw_points])
         return ("Technical strengths:\n"
                 f"{bullet_points}")
+
+    def _analyze_tool_stack(self, summaries: List[Dict[str, str]], question: str, mode: str) -> str:
+        """Answer questions about frequently used tools/technology stack."""
+        keywords = ["python", "docker", "git", "linux", "fastapi", "pytorch", "aws", "tool", "framework"]
+        evidences = self._find_keyword_evidence(summaries, keywords, limit=4)
+        if mode == "short":
+            return self._format_short_points(evidences, "Regularly uses Python, Docker, Git, and Linux tooling.")
+
+        if not evidences:
+            evidences = [
+                "Resume: Daily automation in Python/PyTorch with FastAPI services.",
+                "Resume: Docker + Git-based CI/CD pipelines on Linux.",
+                "Resume: Embedded debugging with VS Code, GDB, and hardware probes."
+            ]
+
+        bullet_points = "\n".join([f"• {point}" for point in evidences])
+        return ("Tool stack:\n"
+                f"{bullet_points}\n"
+                "These are the technologies I touch most days.")
 
     def _analyze_projects(self, summaries: List[Dict[str, str]], question: str, mode: str) -> str:
         """Analyze projects from context"""
@@ -403,16 +467,24 @@ class MockLLM:
 
     def _analyze_healthcare_experience(self, summaries: List[Dict[str, str]], question: str, mode: str) -> str:
         """Highlight healthcare/data-science experience"""
-        points = self._extract_context_points(summaries, limit=4)
+        keywords = ["healthcare", "patient", "clinical", "medical", "icu", "readmission", "sepsis", "hospital"]
+        points = self._find_keyword_evidence(summaries, keywords, limit=4)
         if mode == "short":
-            return self._format_short_points(points, "Healthcare DS building ICU readmission & sepsis models with clinicians.")
+            if points:
+                return self._format_short_points(points, "Healthcare analytics focus.")
+            return "No patient-care impact documented yet."
         elif mode == "star":
-            return ("Situation: ICU teams struggled with late readmission alerts\n"
-                    "Task: Deliver a predictive model clinicians could trust\n"
-                    "Action: Engineered LightGBM features from vitals, aligned explanations with physicians\n"
-                    "Result: Earlier interventions and dashboards adopted by critical-care units")
+            if points:
+                return ("Situation: ICU teams struggled with late readmission alerts\n"
+                        "Task: Deliver a predictive model clinicians could trust\n"
+                        "Action: Engineered LightGBM features from vitals, aligned explanations with physicians\n"
+                        "Result: Earlier interventions and dashboards adopted by critical-care units")
+            return "I don't have patient-care case studies documented yet. Upload healthcare projects to highlight them."
 
-        bullet_points = "\n".join([f"• {point}" for point in points[:4]])
+        if not points:
+            return "I don't have specific patient-care impact documented in the uploaded materials. Please upload healthcare projects to highlight them."
+
+        bullet_points = "\n".join([f"• {point}" for point in points])
         return ("Healthcare impact:\n"
                 f"{bullet_points}\n"
                 "• Tooling: Python, LightGBM, TensorFlow, SQL, FHIR/HL7 data pipelines")
@@ -485,6 +557,141 @@ class MockLLM:
                    "Whether you're curious about my technical experience, recent projects, or just want to chat about technology trends, I'm here to help!\\n\\n"
                    "What would you like to explore about my background?")
 
+class OpenAILLM:
+    """Production-grade LLM powered by OpenAI Chat Completions."""
+
+    def __init__(
+        self,
+        api_key: str,
+        model: Optional[str] = None,
+        temperature: float = 0.2,
+        max_tokens: int = 700
+    ):
+        if not OpenAI:
+            raise RuntimeError("openai package is not installed")
+        if not api_key:
+            raise ValueError("OPENAI_API_KEY is required for OpenAI-backed responses")
+
+        self.client = OpenAI(api_key=api_key)
+        self.model = model or os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+        self.temperature = float(os.getenv("OPENAI_TEMPERATURE", temperature))
+        self.max_tokens = int(os.getenv("OPENAI_MAX_TOKENS", max_tokens))
+
+    def _build_system_prompt(self) -> str:
+        return (
+            "You are ProfileGPT, a recruiter-facing AI that summarizes a candidate's background using provided evidence. "
+            "Keep responses confident, structured, and grounded strictly in the supplied context."
+        )
+
+    def _mode_guidance(self, mode: str) -> str:
+        normalized = (mode or "detailed").lower()
+        if normalized == "short":
+            return (
+                "Return 2-3 short bullets that highlight the most relevant wins. Bold proper nouns and keep each bullet under 25 words."
+            )
+        if normalized == "star":
+            return (
+                "Respond with STAR format using four labeled lines (Situation, Task, Action, Result). Each line must reference the evidence snippets."
+            )
+        return (
+            "Provide 3-4 recruiter-friendly bullets that reference concrete achievements. Finish with a one-sentence closing insight tied to the question."
+        )
+
+    def _build_context(self, chunks: List[Dict[str, Any]], limit: int = 6) -> str:
+        sections: List[str] = []
+        for idx, chunk in enumerate(chunks[:limit], start=1):
+            title = chunk.get("title") or f"Document {idx}"
+            section = chunk.get("section")
+            header = f"{title}" + (f" – {section}" if section else "")
+            text = (chunk.get("text") or "").strip()
+            if not text:
+                continue
+            sections.append(f"[{idx}] {header}\n{text}")
+        if not sections:
+            return "No uploaded content was available."
+        return "\n\n".join(sections)
+
+    def generate_response(self, question: str, chunks: List[Dict[str, Any]], mode: str = "detailed") -> str:
+        context = self._build_context(chunks)
+        user_prompt = (
+            f"Question: {question}\n"
+            f"Mode: {mode}\n"
+            f"Guidance: {self._mode_guidance(mode)}\n\n"
+            "Use only the context below. If evidence is missing, say so and recommend uploading more documents.\n\n"
+            f"Context:\n{context}\n\n"
+            "Compose the final answer now."
+        )
+
+        completion = self.client.chat.completions.create(
+            model=self.model,
+            temperature=self.temperature,
+            max_tokens=self.max_tokens,
+            messages=[
+                {"role": "system", "content": self._build_system_prompt()},
+                {"role": "user", "content": user_prompt}
+            ],
+        )
+
+        return completion.choices[0].message.content.strip()
+
+
+class LocalHFLLM:
+    """Runs a local Hugging Face instruction model for zero-cost responses."""
+
+    def __init__(
+        self,
+        model_name: Optional[str] = None,
+        max_new_tokens: int = 256
+    ):
+        if not AutoTokenizer or not AutoModelForSeq2SeqLM:
+            raise RuntimeError("transformers is not installed; cannot initialize LocalHFLLM")
+        if not torch:
+            raise RuntimeError("PyTorch is required for LocalHFLLM")
+
+        self.model_name = model_name or os.getenv("HF_LLM_MODEL", "google/flan-t5-base")
+        print(f"✅ Loading local HuggingFace model: {self.model_name}")
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+        self.model = AutoModelForSeq2SeqLM.from_pretrained(self.model_name)
+        device_type = "cuda" if torch.cuda.is_available() else "cpu"
+        self.device = torch.device(device_type)
+        self.model.to(self.device)
+        self.max_new_tokens = max_new_tokens
+
+    def _build_prompt(self, question: str, mode: str, chunks: List[Dict[str, Any]], limit: int = 6) -> str:
+        summaries: List[str] = []
+        for idx, chunk in enumerate(chunks[:limit], start=1):
+            title = chunk.get("title") or f"Document {idx}"
+            section = chunk.get("section")
+            header = f"{title}" + (f" – {section}" if section else "")
+            text = (chunk.get("text") or "").strip()
+            if text:
+                summaries.append(f"[{idx}] {header}: {text}")
+        context_block = " \n".join(summaries) if summaries else "No uploaded documents."
+        guidance = (
+            "Answer in recruiter-friendly bullets. Mention citations like [1], [2]."
+            if mode.lower() != "star"
+            else "Respond with Situation, Task, Action, Result sentences. Reference citations like [1]."
+        )
+        return (
+            "You are ProfileGPT, summarizing a professional profile for recruiters. "
+            "Stay grounded in the provided evidence and state if data is missing.\n\n"
+            f"Question: {question}\nMode: {mode}\nGuidance: {guidance}\n\n"
+            f"Context:\n{context_block}\n\nAnswer:"
+        )
+
+    def generate_response(self, question: str, chunks: List[Dict[str, Any]], mode: str = "detailed") -> str:
+        prompt = self._build_prompt(question, mode, chunks)
+        inputs = self.tokenizer(prompt, return_tensors="pt", truncation=True).to(self.device)
+        outputs = self.model.generate(
+            **inputs,
+            max_new_tokens=self.max_new_tokens,
+            temperature=0.2,
+            top_p=0.9,
+            do_sample=False
+        )
+        return self.tokenizer.decode(outputs[0], skip_special_tokens=True).strip()
+
+
 class MockEmbedding:
     """Mock embedding model for demo purposes"""
 
@@ -554,7 +761,7 @@ class ProfileInsightsCache:
 class RAGEngine:
     def __init__(self, db_manager: DatabaseManager):
         self.db = db_manager
-        self.llm = MockLLM()
+        self.llm = self._init_llm()
         if SentenceTransformer:
             try:
                 self.embedding_model = TransformerEmbedding()
@@ -565,6 +772,29 @@ class RAGEngine:
         else:
             self.embedding_model = MockEmbedding()
         self.insights_cache = ProfileInsightsCache()
+
+    def _init_llm(self):
+        """Initialize the best available LLM backend based on environment variables."""
+        provider = (os.getenv("LLM_PROVIDER") or "auto").lower()
+        openai_key = os.getenv("OPENAI_API_KEY")
+
+        if provider in ("openai", "auto") and openai_key:
+            try:
+                model = os.getenv("OPENAI_MODEL")
+                print("✅ Using OpenAI chat completions for responses")
+                return OpenAILLM(api_key=openai_key, model=model)
+            except Exception as exc:
+                print(f"⚠️  Failed to initialize OpenAI LLM ({exc}). Falling back to MockLLM.")
+
+        if provider in ("hf", "local", "auto"):
+            try:
+                model_name = os.getenv("HF_LLM_MODEL")
+                return LocalHFLLM(model_name=model_name)
+            except Exception as exc:
+                print(f"⚠️  Failed to initialize LocalHFLLM ({exc}).")
+
+        print("⚠️  No external LLM configured; using heuristic MockLLM.")
+        return MockLLM()
 
     def chunk_text(self, text: str, chunk_size: int = 800, overlap: int = 200) -> List[str]:
         """Split text into overlapping chunks"""

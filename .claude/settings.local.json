@@ -13,7 +13,13 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "WebFetch(domain:dashing-torrone-daca26.netlify.app)",
-      "Read(//Users/sagarpatel/Desktop/**)"
+      "Read(//Users/sagarpatel/Desktop/**)",
+      "Bash(npm install)",
+      "Bash(npm run dev:*)",
+      "Bash(chmod:*)",
+      "Bash(npm install:*)",
+      "Bash(./deploy.sh)",
+      "Bash(sudo npm install -g @railway/cli vercel)"
     ],
     "deny": [],
     "ask": []

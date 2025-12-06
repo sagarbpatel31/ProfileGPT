@@ -14,12 +14,14 @@ from dotenv import load_dotenv
 from database import DatabaseManager
 from rag_engine import RAGEngine
 from profile_scrapers import scrape_profile_from_url, get_supported_platforms
+from intelligent_skill_discovery import IntelligentSkillDiscovery
 
 load_dotenv()
 
 # Initialize database and RAG engine
 db_manager = DatabaseManager()
 rag_engine = RAGEngine(db_manager)
+skill_discovery = IntelligentSkillDiscovery(db_manager)
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
 app = FastAPI(
@@ -96,18 +98,28 @@ async def health_check():
 @app.post("/ask", response_model=ChatResponse)
 async def ask_question(request: ChatRequest):
     """
-    Main RAG endpoint for answering questions about the profile
-    Uses 100% free implementation with mock LLM and embeddings
+    Enhanced RAG endpoint with intelligent skill discovery
+    Learns from user questions and adapts to new skills mentioned
     """
     try:
+        # Learn from the question context
+        discovered_skills = skill_discovery.learn_from_query(request.question)
+
+        # Process the question with RAG
         response = rag_engine.ask(
             question=request.question,
             tenant_id=request.tenant_id or "demo-tenant",
             mode=request.mode
         )
 
+        # Enhance response with discovered skills if any
+        enhanced_answer = response.answer
+        if discovered_skills:
+            skill_names = [s.skill_name for s in discovered_skills[:3]]  # Top 3 discovered skills
+            enhanced_answer += f"\n\n*Note: I detected mentions of {', '.join(skill_names)} - these skills have been learned for future queries.*"
+
         return ChatResponse(
-            answer=response.answer,
+            answer=enhanced_answer,
             citations=response.citations,
             sources=response.sources,
             latency_ms=response.latency_ms,
@@ -456,6 +468,127 @@ async def tenant_insights(tenant_id: str):
         return rag_engine.generate_profile_insights(tenant_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# Intelligent Skill Discovery Endpoints
+@app.post("/skills/discover")
+async def discover_skills_from_text(request: dict):
+    """
+    Discover skills from provided text and learn them for future queries
+    """
+    try:
+        text = request.get("text", "")
+        source = request.get("source", "manual_input")
+
+        discovered_skills = skill_discovery.discover_skills_from_text(text, source)
+
+        skill_results = []
+        for skill in discovered_skills:
+            # Enhance with web research
+            enhanced_skill = skill_discovery._enhance_skill_with_web_research(skill)
+
+            skill_results.append({
+                "skill_name": enhanced_skill.skill_name,
+                "category": enhanced_skill.category,
+                "confidence": enhanced_skill.confidence,
+                "evidence": enhanced_skill.evidence[:200] + "..." if len(enhanced_skill.evidence) > 200 else enhanced_skill.evidence,
+                "related_skills": enhanced_skill.related_skills or [],
+                "source": enhanced_skill.source
+            })
+
+        return {
+            "discovered_skills": skill_results,
+            "total_discovered": len(skill_results),
+            "learning_status": "Skills have been learned and added to knowledge base"
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/skills/{skill_name}/research")
+async def research_skill(skill_name: str):
+    """
+    Get comprehensive research information about a specific skill
+    """
+    try:
+        insights = skill_discovery.get_skill_insights(skill_name)
+        return insights
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/skills/adaptive-learning")
+async def adaptive_skill_learning(request: dict):
+    """
+    Perform adaptive learning from user interactions and documents
+    """
+    try:
+        documents = request.get("documents", [])
+        recent_queries = request.get("recent_queries", [])
+
+        learning_results = skill_discovery.adaptive_skill_learning(documents, recent_queries)
+
+        return {
+            "learning_summary": {
+                "new_skills_discovered": len(learning_results["new_skills"]),
+                "skills_updated": len(learning_results["updated_skills"]),
+                "trend_categories": len(learning_results["skill_trends"])
+            },
+            "new_skills": [
+                {
+                    "name": skill.skill_name,
+                    "category": skill.category,
+                    "confidence": skill.confidence
+                } for skill in learning_results["new_skills"][:10]  # Top 10
+            ],
+            "skill_trends": learning_results["skill_trends"],
+            "recommendations": [
+                "Continue adding technical documentation to showcase skills",
+                "Consider highlighting trending skills in your profile",
+                "Skills database has been enhanced with discovered competencies"
+            ]
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/skills/categories")
+async def get_skill_categories():
+    """
+    Get available skill categories for better organization
+    """
+    return {
+        "categories": [
+            {
+                "name": "Programming Languages",
+                "description": "Core programming and scripting languages",
+                "examples": ["Python", "JavaScript", "Java", "C++", "TypeScript"]
+            },
+            {
+                "name": "Frameworks & Libraries",
+                "description": "Development frameworks and libraries",
+                "examples": ["React", "Django", "TensorFlow", "Express.js"]
+            },
+            {
+                "name": "Cloud Platforms",
+                "description": "Cloud computing and infrastructure",
+                "examples": ["AWS", "Azure", "Google Cloud", "Docker", "Kubernetes"]
+            },
+            {
+                "name": "Databases",
+                "description": "Database systems and data storage",
+                "examples": ["PostgreSQL", "MongoDB", "Redis", "Elasticsearch"]
+            },
+            {
+                "name": "AI & Machine Learning",
+                "description": "Artificial intelligence and ML technologies",
+                "examples": ["Machine Learning", "Deep Learning", "NLP", "Computer Vision"]
+            },
+            {
+                "name": "Soft Skills",
+                "description": "Leadership and communication abilities",
+                "examples": ["Leadership", "Project Management", "Team Collaboration"]
+            }
+        ]
+    }
 
 # Add some demo data on startup
 @app.on_event("startup")

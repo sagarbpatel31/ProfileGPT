@@ -1,0 +1,32 @@
+# Deployment-optimized requirements
+# Core FastAPI dependencies
+fastapi==0.118.0
+uvicorn==0.37.0
+python-multipart==0.0.20
+starlette==0.48.0
+
+# Database and storage
+numpy==2.2.3
+pandas==2.3.2
+
+# Document processing - simplified
+PyPDF2==3.0.1
+beautifulsoup4==4.13.5
+requests==2.32.5
+python-docx==1.1.2
+
+# Standard library extensions
+python-dotenv==1.1.1
+pydantic==2.11.7
+
+# AI model stack - production ready
+sentence-transformers==3.0.1
+transformers==4.45.0
+torch==2.9.1
+
+# Essential document processing only
+python-magic
+markdown==3.7
+
+# LLM providers
+openai==1.58.1

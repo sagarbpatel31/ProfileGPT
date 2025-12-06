@@ -177,8 +177,10 @@ def _calculate_skill_confidence():       # Score skill mentions
 DATABASE_URL=sqlite:///./profilegpt.db
 USE_SQLITE=true
 
-# Mock LLM (no API costs)
-OPENAI_API_KEY=sk-demo-key-placeholder
+# LLM Settings
+LLM_PROVIDER=mock            # keep heuristic responses
+# OPENAI_API_KEY=sk-your-real-key  # uncomment to enable OpenAI backend
+# HF_LLM_MODEL=google/flan-t5-base  # optional local huggingface model
 
 # Application Settings
 ENVIRONMENT=development
