@@ -18,27 +18,22 @@ python-docx==1.1.2
 python-dotenv==1.1.1
 pydantic==2.11.7
 
-# Enhanced AI model stack for production
+# Premium AI model stack for production
 sentence-transformers==3.0.1
 transformers==4.45.0
 torch==2.9.1
-accelerate==1.2.1
-safetensors==0.7.0
 
-# Enhanced document processing
-python-magic==0.4.27
-python-magic-bin==0.4.14
+# Premium LLM providers
+openai==1.58.1
+anthropic==0.40.0
+tiktoken==0.8.0
+
+# Enhanced document processing (simplified for production)
 pypdf==5.1.0
-unstructured==0.16.8
+python-magic==0.4.27
 markdown==3.7
 html2text==2024.2.26
 
-# LLM providers with better options
-openai==1.58.1
-anthropic==0.40.0
-cohere==5.13.4
-
-# Better text processing
+# Text processing essentials
 langdetect==1.0.9
 textstat==0.7.3
-spacy==3.8.2
