@@ -15,6 +15,7 @@ from database import DatabaseManager
 from rag_engine import RAGEngine
 from profile_scrapers import scrape_profile_from_url, get_supported_platforms
 from intelligent_skill_discovery import IntelligentSkillDiscovery
+from openai_client import openai_client, get_fallback_response
 
 load_dotenv()
 
@@ -98,35 +99,64 @@ async def health_check():
 @app.post("/ask", response_model=ChatResponse)
 async def ask_question(request: ChatRequest):
     """
-    Enhanced RAG endpoint with intelligent skill discovery
-    Learns from user questions and adapts to new skills mentioned
+    Enhanced RAG endpoint with OpenAI integration and intelligent skill discovery
+    Uses premium OpenAI models for high-quality responses
     """
     try:
         # Learn from the question context
         discovered_skills = skill_discovery.learn_from_query(request.question)
 
-        # Process the question with RAG
-        response = rag_engine.ask(
+        # Get relevant context from RAG engine
+        context_result = rag_engine.get_context(
             question=request.question,
-            tenant_id=request.tenant_id or "demo-tenant",
-            mode=request.mode
+            tenant_id=request.tenant_id or "demo-tenant"
         )
 
-        # Enhance response with discovered skills if any
-        enhanced_answer = response.answer
+        # Use OpenAI for response generation if available
+        if openai_client.is_available():
+            ai_response = await openai_client.generate_profile_response(
+                question=request.question,
+                context=context_result.context,
+                mode=request.mode
+            )
+
+            if ai_response["success"]:
+                enhanced_answer = ai_response["answer"]
+            else:
+                # Fallback to basic response
+                enhanced_answer = get_fallback_response(
+                    request.question,
+                    context_result.context,
+                    request.mode
+                )
+        else:
+            # Use fallback when OpenAI is not available
+            enhanced_answer = get_fallback_response(
+                request.question,
+                context_result.context,
+                request.mode
+            )
+
+        # Add skill discovery note if any
         if discovered_skills:
-            skill_names = [s.skill_name for s in discovered_skills[:3]]  # Top 3 discovered skills
+            skill_names = [s.skill_name for s in discovered_skills[:3]]
             enhanced_answer += f"\n\n*Note: I detected mentions of {', '.join(skill_names)} - these skills have been learned for future queries.*"
 
         return ChatResponse(
             answer=enhanced_answer,
-            citations=response.citations,
-            sources=response.sources,
-            latency_ms=response.latency_ms,
-            mode=response.mode
+            citations=context_result.citations,
+            sources=context_result.sources,
+            latency_ms=getattr(context_result, 'latency_ms', 0),
+            mode=request.mode
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# AI usage stats endpoint
+@app.get("/ai/stats")
+async def get_ai_stats():
+    """Get AI usage and cost statistics"""
+    return openai_client.get_usage_stats()
 
 # Skills lookup endpoint - FULLY IMPLEMENTED
 @app.get("/skills", response_model=SkillResponse)
