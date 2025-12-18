@@ -79,6 +79,16 @@ def create_tenant(request: dict):
         "message": "Account created successfully! This is a test implementation."
     }
 
+@app.post("/ingest")
+def ingest_document():
+    logger.info("=== DOCUMENT INGEST REQUEST ===")
+    # Simple test response for file upload
+    return {
+        "job_id": "test_job_123",
+        "status": "processing",
+        "message": "Document uploaded successfully! This is a test implementation - file processing not yet implemented."
+    }
+
 # Add middleware to log all requests
 @app.middleware("http")
 async def log_requests(request, call_next):
