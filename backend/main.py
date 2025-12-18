@@ -35,6 +35,20 @@ def health():
     logger.info("Health endpoint called")
     return {"status": "ok", "port": os.getenv("PORT", "unknown")}
 
+@app.post("/ask")
+def ask_question(request: dict):
+    logger.info(f"Ask endpoint called with: {request}")
+    question = request.get("question", "")
+    mode = request.get("mode", "detailed")
+    tenant_id = request.get("tenant_id", "demo")
+
+    # Simple test response for now
+    return {
+        "answer": f"Thank you for asking: '{question}'. This is a test response in {mode} mode for tenant {tenant_id}. Backend is successfully connected! 🎉",
+        "citations": [],
+        "sources": []
+    }
+
 # Add startup event for debugging
 @app.on_event("startup")
 async def startup_event():
