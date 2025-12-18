@@ -31,4 +31,6 @@ async def startup_event():
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    logger.info(f"=== STARTING UVICORN ON PORT {port} ===")
+    logger.info(f"=== ALL ENV VARS: {dict(os.environ)} ===")
+    uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")
