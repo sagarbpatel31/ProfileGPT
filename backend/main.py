@@ -51,12 +51,17 @@ def ask_question(request: dict):
 
 @app.post("/tenant")
 def create_tenant(request: dict):
-    logger.info(f"Create tenant called with: {request}")
+    logger.info(f"=== TENANT CREATION REQUEST ===")
+    logger.info(f"Request data: {request}")
+    logger.info(f"Request keys: {list(request.keys()) if request else 'None'}")
+
     name = request.get("name", "")
     email = request.get("email", "")
     password = request.get("password", "")
     profession = request.get("profession", "")
     bio = request.get("bio", "")
+
+    logger.info(f"Parsed - Name: {name}, Email: {email}, Profession: {profession}")
 
     # Generate a simple tenant ID for testing
     import uuid
@@ -73,6 +78,15 @@ def create_tenant(request: dict):
         "chat_url": f"https://profile-gpt-sagarbpatel31s-projects.vercel.app?tenant={tenant_id}",
         "message": "Account created successfully! This is a test implementation."
     }
+
+# Add middleware to log all requests
+@app.middleware("http")
+async def log_requests(request, call_next):
+    logger.info(f"=== REQUEST: {request.method} {request.url} ===")
+    logger.info(f"Headers: {dict(request.headers)}")
+    response = await call_next(request)
+    logger.info(f"Response status: {response.status_code}")
+    return response
 
 # Add startup event for debugging
 @app.on_event("startup")
