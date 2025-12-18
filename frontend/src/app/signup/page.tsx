@@ -26,8 +26,11 @@ export default function SignupPage() {
     setIsLoading(true);
     setError('');
 
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    console.log('Using API URL:', apiUrl);
+
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/tenant`, {
+      const response = await fetch(`${apiUrl}/tenant`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -61,7 +64,7 @@ export default function SignupPage() {
       }
     } catch (error) {
       console.error('Signup error:', error);
-      setError('Network error. Please make sure the backend server is running.');
+      setError(`Network error. Trying to connect to: ${apiUrl}. Please make sure the backend server is running.`);
     } finally {
       setIsLoading(false);
     }
