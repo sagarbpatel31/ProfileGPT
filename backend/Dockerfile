@@ -15,8 +15,7 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install spacy and download model (optional, Railway compatible)
-RUN pip install spacy || echo "Spacy install failed, continuing without it"
+# Skip spacy for minimal test
 
 # Copy application code
 COPY . .
