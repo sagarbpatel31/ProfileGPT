@@ -46,12 +46,14 @@ app.add_middleware(
 
 @app.get("/")
 def read_root():
-    logger.info("Root endpoint called")
+    logger.info("Root endpoint called - ENHANCED VERSION ACTIVE")
     return {
-        "Hello": "World",
+        "Hello": "ProfileGPT Enhanced Backend",
         "PORT": os.getenv("PORT", "unknown"),
-        "version": "enhanced-v2.0",
-        "timestamp": datetime.utcnow().isoformat()
+        "version": "enhanced-v2.0-FIXED",
+        "timestamp": datetime.utcnow().isoformat(),
+        "status": "ENHANCED_BACKEND_RUNNING",
+        "features": ["advanced_chunking", "star_methodology", "semantic_search"]
     }
 
 @app.get("/health")
