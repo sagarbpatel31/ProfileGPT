@@ -2,6 +2,7 @@
 Ultra-minimal FastAPI test for Railway deployment
 """
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 import os
 import logging
 
@@ -10,6 +11,19 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://profile-gpt-sagarbpatel31s-projects.vercel.app",
+        "http://localhost:3000",  # For local development
+        "https://localhost:3000", # For local development with HTTPS
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/")
 def read_root():
