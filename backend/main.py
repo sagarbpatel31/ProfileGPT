@@ -49,6 +49,31 @@ def ask_question(request: dict):
         "sources": []
     }
 
+@app.post("/tenant")
+def create_tenant(request: dict):
+    logger.info(f"Create tenant called with: {request}")
+    name = request.get("name", "")
+    email = request.get("email", "")
+    password = request.get("password", "")
+    profession = request.get("profession", "")
+    bio = request.get("bio", "")
+
+    # Generate a simple tenant ID for testing
+    import uuid
+    tenant_id = str(uuid.uuid4())[:8]
+    api_key = f"pk_test_{tenant_id}"
+
+    # Simple test response for now
+    return {
+        "tenant_id": tenant_id,
+        "name": name,
+        "email": email,
+        "api_key": api_key,
+        "embed_code": f'<script src="https://profile-gpt-sagarbpatel31s-projects.vercel.app/widget.js" data-tenant="{tenant_id}"></script>',
+        "chat_url": f"https://profile-gpt-sagarbpatel31s-projects.vercel.app?tenant={tenant_id}",
+        "message": "Account created successfully! This is a test implementation."
+    }
+
 # Add startup event for debugging
 @app.on_event("startup")
 async def startup_event():
