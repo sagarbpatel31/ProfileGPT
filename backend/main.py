@@ -1,7 +1,7 @@
 """
 Ultra-minimal FastAPI test for Railway deployment
 """
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 import os
 import logging
@@ -80,13 +80,46 @@ def create_tenant(request: dict):
     }
 
 @app.post("/ingest")
-def ingest_document():
-    logger.info("=== DOCUMENT INGEST REQUEST ===")
+async def ingest_document(
+    file: UploadFile = File(...),
+    source_type: str = Form(...),
+    tenant_id: str = Form(...),
+    title: str = Form(None)
+):
+    logger.info(f"=== DOCUMENT INGEST REQUEST ===")
+    logger.info(f"File: {file.filename}, Size: {file.size}, Type: {file.content_type}")
+    logger.info(f"Source Type: {source_type}, Tenant: {tenant_id}, Title: {title}")
+
+    # Read file content to verify upload
+    content = await file.read()
+    logger.info(f"File content length: {len(content)} bytes")
+
     # Simple test response for file upload
     return {
         "job_id": "test_job_123",
         "status": "processing",
-        "message": "Document uploaded successfully! This is a test implementation - file processing not yet implemented."
+        "message": f"Document '{file.filename}' uploaded successfully! Size: {len(content)} bytes. This is a test implementation.",
+        "document_id": f"doc_{tenant_id}_{file.filename}",
+        "filename": file.filename,
+        "source_type": source_type
+    }
+
+@app.get("/documents/{tenant_id}")
+def get_documents(tenant_id: str):
+    logger.info(f"=== GET DOCUMENTS FOR TENANT: {tenant_id} ===")
+    # Return test documents for now
+    return {
+        "documents": [
+            {
+                "id": f"doc_{tenant_id}_test",
+                "title": "Test Document",
+                "source_type": "resume",
+                "filename": "test_resume.pdf",
+                "created_at": "2025-12-17T10:34:36Z",
+                "status": "completed",
+                "chunk_count": 5
+            }
+        ]
     }
 
 # Add middleware to log all requests
