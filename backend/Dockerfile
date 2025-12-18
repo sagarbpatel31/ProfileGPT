@@ -38,5 +38,9 @@ EXPOSE 8000
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app
 
-# Run the application with verbose logging
-CMD ["sh", "-c", "echo 'Starting app with PORT='$PORT && uvicorn main:app --host 0.0.0.0 --port $PORT --log-level info --access-log"]
+# Copy startup script
+COPY start.sh .
+RUN chmod +x start.sh
+
+# Run the application using startup script
+CMD ["./start.sh"]
