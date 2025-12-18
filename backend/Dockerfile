@@ -23,6 +23,10 @@ COPY . .
 # Create necessary directories
 RUN mkdir -p data uploads temp
 
+# Copy startup script and make it executable (before user switch)
+COPY start.sh .
+RUN chmod +x start.sh
+
 # Create non-root user for security
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser
@@ -37,10 +41,6 @@ EXPOSE 8000
 # Set environment variables for debugging
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app
-
-# Copy startup script
-COPY start.sh .
-RUN chmod +x start.sh
 
 # Run the application using startup script
 CMD ["./start.sh"]
