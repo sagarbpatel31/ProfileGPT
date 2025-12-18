@@ -47,7 +47,12 @@ app.add_middleware(
 @app.get("/")
 def read_root():
     logger.info("Root endpoint called")
-    return {"Hello": "World", "PORT": os.getenv("PORT", "unknown")}
+    return {
+        "Hello": "World",
+        "PORT": os.getenv("PORT", "unknown"),
+        "version": "enhanced-v2.0",
+        "timestamp": datetime.utcnow().isoformat()
+    }
 
 @app.get("/health")
 def health():
