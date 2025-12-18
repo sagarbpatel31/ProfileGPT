@@ -30,11 +30,24 @@ async def root():
 
 @app.get("/health")
 async def health_check():
+    # Basic database connectivity check
+    db_status = "unknown"
+    try:
+        db_url = os.getenv("DATABASE_URL")
+        if db_url:
+            db_status = "configured"
+        else:
+            db_status = "not_configured"
+    except Exception:
+        db_status = "error"
+
     return {
         "status": "healthy",
         "service": "ProfileGPT API",
         "environment": os.getenv("ENVIRONMENT", "production"),
-        "port": os.getenv("PORT", "8000")
+        "port": os.getenv("PORT", "8000"),
+        "database": db_status,
+        "openai_configured": bool(os.getenv("OPENAI_API_KEY"))
     }
 
 if __name__ == "__main__":
