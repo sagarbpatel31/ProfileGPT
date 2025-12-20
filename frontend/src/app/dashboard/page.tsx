@@ -81,12 +81,12 @@ export default function Dashboard() {
       const response = await fetch(`${API_BASE}/documents/${tenantId}`);
       const data = await response.json();
 
-      const formattedDocs = data.documents.map((doc: DocumentResponse) => ({
+      const formattedDocs = data.documents.map((doc: any) => ({
         id: doc.id,
         title: doc.title,
         source_type: doc.source_type,
-        status: 'completed',
-        chunks_created: doc.chunks_count,
+        status: doc.status || 'completed',
+        chunks_created: doc.chunk_count || 0,
         url: doc.url,
         created_at: doc.created_at
       }));

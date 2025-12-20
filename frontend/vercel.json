@@ -5,11 +5,11 @@
   "framework": "nextjs",
   "regions": ["iad1"],
   "env": {
-    "NEXT_PUBLIC_API_URL": "https://profilegpt-production.up.railway.app"
+    "NEXT_PUBLIC_API_URL": "/api"
   },
   "build": {
     "env": {
-      "NEXT_PUBLIC_API_URL": "https://profilegpt-production.up.railway.app"
+      "NEXT_PUBLIC_API_URL": "/api"
     }
   }
 }
