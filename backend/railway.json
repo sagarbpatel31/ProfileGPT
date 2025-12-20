@@ -5,20 +5,8 @@
   },
   "deploy": {
     "healthcheckPath": "/health",
-    "healthcheckTimeout": 30,
+    "healthcheckTimeout": 60,
     "restartPolicyType": "ON_FAILURE",
-    "restartPolicyMaxRetries": 3
-  },
-  "environments": {
-    "production": {
-      "variables": {
-        "ENVIRONMENT": "production",
-        "LOG_LEVEL": "INFO",
-        "USE_LOCAL_EMBEDDINGS": "true",
-        "CHUNK_SIZE": "1000",
-        "MAX_RETRIEVAL_CHUNKS": "12",
-        "EMBEDDING_MODEL_NAME": "sentence-transformers/all-MiniLM-L6-v2"
-      }
-    }
+    "restartPolicyMaxRetries": 2
   }
 }

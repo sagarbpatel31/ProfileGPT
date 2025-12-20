@@ -9,12 +9,23 @@ import logging
 import io
 import re
 from typing import List, Dict, Any
-from openai import OpenAI
-import PyPDF2
-from docx import Document
-import tiktoken
 import uuid
 from datetime import datetime
+
+# Import document processing libraries with error handling
+try:
+    import PyPDF2
+    PDF_AVAILABLE = True
+except ImportError:
+    PDF_AVAILABLE = False
+    PyPDF2 = None
+
+try:
+    from docx import Document as DocxDocument
+    DOCX_AVAILABLE = True
+except ImportError:
+    DOCX_AVAILABLE = False
+    DocxDocument = None
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -25,15 +36,21 @@ app = FastAPI(title="ProfileGPT API", version="2.0-Clean")
 
 # Initialize OpenAI (will fail gracefully if no API key)
 openai_client = None
+openai_available = False
+
 try:
     openai_api_key = os.getenv("OPENAI_API_KEY")
-    if openai_api_key:
+    if openai_api_key and len(openai_api_key) > 10:
+        from openai import OpenAI
         openai_client = OpenAI(api_key=openai_api_key)
-        logger.info("✅ OpenAI client initialized")
+        openai_available = True
+        logger.info("✅ OpenAI client initialized successfully")
     else:
-        logger.warning("⚠️ No OPENAI_API_KEY found - will return mock responses")
+        logger.warning("⚠️ No valid OPENAI_API_KEY found - will return fallback responses")
+except ImportError as e:
+    logger.warning(f"⚠️ OpenAI library not available: {e}")
 except Exception as e:
-    logger.error(f"❌ OpenAI initialization failed: {e}")
+    logger.warning(f"⚠️ OpenAI initialization failed: {e} - continuing without OpenAI")
 
 # In-memory storage (simple and clean)
 tenants = {}
@@ -60,7 +77,7 @@ def read_root():
         "service": "ProfileGPT",
         "version": "2.0-Clean",
         "status": "running",
-        "openai_available": openai_client is not None,
+        "openai_available": openai_available,
         "timestamp": datetime.utcnow().isoformat()
     }
 
@@ -116,15 +133,15 @@ def extract_text_from_file(file_content: bytes, filename: str) -> str:
     text = ""
 
     try:
-        if filename.lower().endswith('.pdf'):
+        if filename.lower().endswith('.pdf') and PDF_AVAILABLE:
             # Extract from PDF
             pdf_reader = PyPDF2.PdfReader(io.BytesIO(file_content))
             for page in pdf_reader.pages:
                 text += page.extract_text() + "\n"
 
-        elif filename.lower().endswith('.docx'):
+        elif filename.lower().endswith('.docx') and DOCX_AVAILABLE:
             # Extract from DOCX
-            doc = Document(io.BytesIO(file_content))
+            doc = DocxDocument(io.BytesIO(file_content))
             for paragraph in doc.paragraphs:
                 text += paragraph.text + "\n"
 
