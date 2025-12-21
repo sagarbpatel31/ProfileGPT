@@ -24,7 +24,7 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/tenant/login`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || '/api'}/tenant/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

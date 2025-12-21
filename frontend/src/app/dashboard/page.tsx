@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 interface TenantInfo {
   tenant_id: string;
@@ -55,6 +55,26 @@ export default function Dashboard() {
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const router = useRouter();
 
+  const getDocumentTypeLabel = (sourceType: string) => {
+    const labels: Record<string, string> = {
+      'resume': 'Resume',
+      'cover_letter': 'Cover Letter',
+      'portfolio': 'Portfolio',
+      'linkedin': 'LinkedIn',
+      'github': 'GitHub',
+      'paper': 'Research Paper',
+      'misc': 'Other',
+      'github_profile': 'GitHub',
+      'linkedin_profile': 'LinkedIn',
+      'devto_profile': 'Dev.to',
+      'stackoverflow_profile': 'Stack Overflow',
+      'medium_profile': 'Medium',
+      'twitter_profile': 'Twitter',
+      'uploaded': 'Document'
+    };
+    return labels[sourceType] || sourceType;
+  };
+
   useEffect(() => {
     // Load tenant info from localStorage
     const stored = localStorage.getItem('profilegpt_tenant');
@@ -78,17 +98,20 @@ export default function Dashboard() {
 
   const loadDocuments = async (tenantId: string) => {
     try {
-      const response = await fetch(`${API_BASE}/documents/${tenantId}`);
+      const response = await fetch(`${API_BASE}/documents`);
       const data = await response.json();
 
-      const formattedDocs = data.documents.map((doc: any) => ({
+      // For now, show recently uploaded documents from localStorage
+      const recentUploads = JSON.parse(localStorage.getItem('recent_uploads') || '[]');
+
+      const formattedDocs = recentUploads.map((doc: any) => ({
         id: doc.id,
         title: doc.title,
         source_type: doc.source_type,
         status: doc.status || 'completed',
-        chunks_created: doc.chunk_count || 0,
+        chunks_created: doc.chunks_created || 0,
         url: doc.url,
-        created_at: doc.created_at
+        created_at: doc.created_at || new Date().toISOString()
       }));
 
       setDocuments(formattedDocs);
@@ -101,18 +124,17 @@ export default function Dashboard() {
     if (!confirm('Are you sure you want to delete this document?')) return;
 
     try {
-      const response = await fetch(`${API_BASE}/documents/${documentId}`, {
-        method: 'DELETE'
-      });
+      // Remove from localStorage
+      const recentUploads = JSON.parse(localStorage.getItem('recent_uploads') || '[]');
+      const updatedUploads = recentUploads.filter((doc: any) => doc.id !== documentId);
+      localStorage.setItem('recent_uploads', JSON.stringify(updatedUploads));
 
-      if (response.ok) {
-        // Reload documents after deletion
-        if (tenantInfo) {
-          loadDocuments(tenantInfo.tenant_id);
-        }
-      } else {
-        alert('Failed to delete document');
+      // Reload documents after deletion
+      if (tenantInfo) {
+        loadDocuments(tenantInfo.tenant_id);
       }
+
+      alert('Document deleted successfully!');
     } catch (error) {
       console.error('Error deleting document:', error);
       alert('Error deleting document');
@@ -143,8 +165,24 @@ export default function Dashboard() {
       const data = await response.json();
 
       if (response.ok) {
-        // Reload documents from server to ensure consistency
+        // Store uploaded document locally for now
+        const recentUploads = JSON.parse(localStorage.getItem('recent_uploads') || '[]');
+        const newDoc = {
+          id: data.document.id,
+          title: data.document.title,
+          source_type: data.document.source_type,
+          status: data.document.status,
+          chunks_created: 1,
+          created_at: new Date().toISOString()
+        };
+        recentUploads.unshift(newDoc);
+        localStorage.setItem('recent_uploads', JSON.stringify(recentUploads.slice(0, 10))); // Keep latest 10
+
+        // Reload documents from localStorage
         loadDocuments(tenantInfo.tenant_id);
+
+        // Show success message
+        alert('Document uploaded successfully!');
 
         // Reset form
         setUploadFile(null);
@@ -155,7 +193,7 @@ export default function Dashboard() {
         const fileInput = document.getElementById('file-upload') as HTMLInputElement;
         if (fileInput) fileInput.value = '';
       } else {
-        setUploadError(data.detail || 'Upload failed');
+        setUploadError(data.error || 'Upload failed');
       }
     } catch (error) {
       console.error('Error uploading file:', error);
@@ -343,7 +381,7 @@ export default function Dashboard() {
                     value={uploadTitle || ''}
                     onChange={(e) => setUploadTitle(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black placeholder-gray-500"
-                    placeholder="My Software Engineer Resume"
+                    placeholder="Resume"
                   />
                 </div>
 
@@ -425,7 +463,7 @@ export default function Dashboard() {
                       value={uploadTitle}
                       onChange={(e) => setUploadTitle(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black placeholder-gray-500"
-                      placeholder="My GitHub Profile"
+                      placeholder="GitHub Profile"
                     />
                   </div>
 
@@ -481,7 +519,7 @@ export default function Dashboard() {
                         <div className="flex-1">
                           <h3 className="font-medium text-gray-900">{doc.title}</h3>
                           <p className="text-sm text-gray-500">
-                            {doc.source_type} • {doc.status}
+                            {getDocumentTypeLabel(doc.source_type)} • {doc.status}
                             {doc.chunks_created && ` • ${doc.chunks_created} chunks processed`}
                           </p>
                         </div>

@@ -19,7 +19,15 @@
       "Bash(chmod:*)",
       "Bash(npm install:*)",
       "Bash(./deploy.sh)",
-      "Bash(sudo npm install -g @railway/cli vercel)"
+      "Bash(sudo npm install -g @railway/cli vercel)",
+      "Bash(sudo npm install -g vercel)",
+      "Bash(npx vercel:*)",
+      "Read(//var/folders/7h/dsdhfkyx2jj12j3ghdxlwj8m0000gn/T/TemporaryItems/NSIRD_screencaptureui_2X98gv/**)",
+      "Bash(npm run build:*)",
+      "Bash(npm run type-check:*)",
+      "Read(//var/folders/7h/dsdhfkyx2jj12j3ghdxlwj8m0000gn/T/TemporaryItems/NSIRD_screencaptureui_bl6xi4/**)",
+      "Bash(npx tsc:*)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []

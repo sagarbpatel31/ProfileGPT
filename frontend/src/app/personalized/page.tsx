@@ -39,7 +39,7 @@ interface TenantInfo {
   bio?: string;
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 const getCategoryIcon = (categoryId?: string) => {
   switch (categoryId) {
@@ -168,28 +168,57 @@ export default function PersonalizedProfileGPT() {
   useEffect(() => {
     if (!tenantReady) return;
 
-    fetch(`${API_BASE}/tenant/${activeTenantId}/insights`)
+    // Try to get dynamic categories based on uploaded documents first
+    fetch(`${API_BASE}/analyze-field`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
       .then(res => res.json())
       .then(data => {
-        const remoteCategories = (data.categories || []).map((category: InsightCategoryResponse) => ({
-          id: category.id,
-          title: category.title,
-          description: category.description,
-          sampleQuestions: category.sampleQuestions || [],
-          icon: getCategoryIcon(category.id)
-        }));
-
-        if (remoteCategories.length) {
-          setCategories(remoteCategories);
+        if (data.categories && data.categories.length > 0) {
+          const adaptiveCategories = data.categories.map((category: any) => ({
+            id: category.id,
+            title: category.title,
+            description: category.description,
+            sampleQuestions: category.sampleQuestions || [],
+            icon: getCategoryIcon(category.id)
+          }));
+          setCategories(adaptiveCategories);
         } else {
           setCategories(DEFAULT_CATEGORIES);
         }
 
-        setTopSkills(data.top_skills || []);
+        const skills = data.topSkills || [];
+        setTopSkills(skills.slice(0, 8));
       })
-      .catch(() => {
-        setCategories(DEFAULT_CATEGORIES);
-        setTopSkills([]);
+      .catch(err => {
+        console.error('Failed to analyze field:', err);
+        // Fallback to original insights endpoint
+        fetch(`${API_BASE}/tenant/${activeTenantId}/insights`)
+          .then(res => res.json())
+          .then(data => {
+            const remoteCategories = (data.categories || []).map((category: InsightCategoryResponse) => ({
+              id: category.id,
+              title: category.title,
+              description: category.description,
+              sampleQuestions: category.sampleQuestions || [],
+              icon: getCategoryIcon(category.id)
+            }));
+
+            if (remoteCategories.length) {
+              setCategories(remoteCategories);
+            } else {
+              setCategories(DEFAULT_CATEGORIES);
+            }
+
+            setTopSkills(data.top_skills || []);
+          })
+          .catch(() => {
+            setCategories(DEFAULT_CATEGORIES);
+            setTopSkills([]);
+          });
       });
   }, [tenantReady, activeTenantId]);
 
@@ -225,7 +254,7 @@ export default function PersonalizedProfileGPT() {
         body: JSON.stringify({
           question,
           mode,
-          tenant_id: activeTenantId,
+          tenantId: activeTenantId,
         }),
       });
 
@@ -260,7 +289,7 @@ export default function PersonalizedProfileGPT() {
   };
 
   const handleCategoryClick = (category: DataCategory) => {
-    setSelectedCategory(category.title);
+    // Just ask the first question directly, no expansion
     if (category.sampleQuestions.length > 0) {
       askQuestion(category.sampleQuestions[0]);
     }
@@ -425,11 +454,7 @@ export default function PersonalizedProfileGPT() {
             <div key={index}>
               <button
                 onClick={() => handleCategoryClick(category)}
-                className={`w-full p-4 rounded-xl text-left transition-all border ${
-                  selectedCategory === category.title
-                    ? 'bg-blue-50 border-blue-200 shadow-sm'
-                    : 'bg-white border-gray-200 hover:shadow'
-                }`}
+                className="w-full p-4 rounded-xl text-left transition-all border bg-white border-gray-200 hover:shadow"
               >
                 <div className="flex items-start gap-3">
                   {category.icon}
@@ -440,19 +465,7 @@ export default function PersonalizedProfileGPT() {
                 </div>
               </button>
 
-              {selectedCategory === category.title && (
-                <div className="mt-2 ml-8 space-y-1">
-                  {category.sampleQuestions.slice(1).map((question, qIndex) => (
-                    <button
-                      key={qIndex}
-                      onClick={() => handleSampleQuestionClick(question)}
-                      className="block w-full text-left px-3 py-2 text-xs text-blue-600 hover:bg-blue-50 rounded-lg"
-                    >
-                      <span>&ldquo;{question}&rdquo;</span>
-                    </button>
-                  ))}
-                </div>
-              )}
+              {/* Removed sub-questions - only show main topics */}
             </div>
           ))}
         </div>

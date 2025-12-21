@@ -1,598 +1,243 @@
-# ProfileGPT - AI-Powered Portfolio Chat System
+# ProfileGPT - Personalized AI Portfolio Assistant
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-brightgreen)](https://personalgpt-projects.vercel.app)
-[![Backend API](https://img.shields.io/badge/API-PythonAnywhere-blue)](https://sagarbpatel31.pythonanywhere.com)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Cost](https://img.shields.io/badge/Cost-Free%20Forever-green)](README.md)
+[![Deploy](https://img.shields.io/badge/Deploy-Vercel-black?logo=vercel)](https://profile-gpt.vercel.app)
+[![Database](https://img.shields.io/badge/Database-Supabase-green?logo=supabase)](https://supabase.com)
+[![AI](https://img.shields.io/badge/AI-OpenAI-blue?logo=openai)](https://openai.com)
 
-**ProfileGPT** transforms static portfolios into **interactive AI chat experiences**. Recruiters and collaborators can ask natural language questions about your professional background and receive accurate, cited answers from your documents.
+**Live Demo**: [https://profile-gpt.vercel.app](https://profile-gpt.vercel.app)
 
-## 🌐 **LIVE DEPLOYMENT**
+ProfileGPT is a RAG-powered AI assistant that allows recruiters and collaborators to chat with your professional profile. Upload your resume, portfolio, and projects to get personalized, cited responses about your experience and skills.
 
-✅ **Frontend**: Deployed on Vercel (100% Free)
-✅ **Backend API**: https://sagarbpatel31.pythonanywhere.com (100% Free)
-✅ **Total Cost**: **$0/month Forever** 🎉
+## ✨ Features
 
-## 🚀 **What ProfileGPT Does**
+- **🤖 AI-Powered Chat**: Ask questions about skills, experience, and projects
+- **📄 Document Upload**: Resume, cover letters, portfolios, research papers
+- **🔍 Hybrid Search**: Vector similarity + full-text search + reranking
+- **📊 Citations**: All answers include source references and evidence
+- **🏢 Multi-Tenant**: Each user gets their own workspace
+- **⚡ Serverless**: Auto-scaling deployment on Vercel
+- **🔒 Secure**: Row-level security and data isolation
 
-ProfileGPT creates an **intelligent AI assistant** that knows everything about your professional background. Instead of recruiters reading through resumes, they can:
+## 🚀 Quick Start
 
-- **Ask Natural Questions**: "What are their Python skills?" or "Tell me about their React projects"
-- **Get Cited Answers**: Every response includes exact sources and evidence from uploaded documents
-- **Verify Skills Quickly**: Fast lookups with confidence scores for specific technologies
-- **Access 24/7**: Works around the clock without human intervention
-
-### **Example Interaction**
-```
-User: "What machine learning experience do they have?"
-
-ProfileGPT: "I have extensive machine learning experience including:
-
-• Built recommendation systems using TensorFlow and scikit-learn at TechCorp
-• Developed NLP models for sentiment analysis processing 100K+ documents
-• Implemented computer vision solutions for automated quality control
-
-Sources: Resume Section 2.1, Portfolio Project #3
-Confidence: 94%"
-```
-
----
-
-## 🏗️ **System Architecture**
-
-```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Frontend      │    │   Backend API    │    │   Database      │
-│   (Next.js)     │◄──►│   (FastAPI)      │◄──►│   (SQLite)      │
-│                 │    │                  │    │                 │
-│ • Chat Interface│    │ • RAG Engine     │    │ • Documents     │
-│ • Professional │    │ • Vector Search  │    │ • Text Chunks   │
-│   UI/UX        │    │ • Citations      │    │ • Embeddings    │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-         │                        │                        │
-         │              ┌──────────────────┐               │
-         └──────────────►│   Deployment     │◄──────────────┘
-                        │                  │
-                        │ • Vercel (Free)  │
-                        │ • PythonAnywhere │
-                        │ • Global CDN     │
-                        └──────────────────┘
-```
-
-### **Infrastructure & Services**
-- **Backend API:** FastAPI app hosted on PythonAnywhere (or any VPS) with Uvicorn.
-- **Data Storage:** SQLite for free/local operation; optional Supabase/Postgres + pgvector ready in `backend/app`.
-- **RAG Components:** Custom chunker + mock embeddings/LLM by default; can swap to OpenAI, Cohere, or local `sentence-transformers`.
-- **Frontend:** Next.js (App Router) deployed on Vercel; widget script served from `frontend/public/widget.js`.
-- **CI/Automation:** Manual deploy via Vercel CLI; regression harness (coming soon) seeds tenants and hits `/ask`, `/skills`, `/ingest`.
-
-### **Tech Stack (100% Free)**
-
-| Component | Technology | Why Chosen | Cost |
-|-----------|------------|------------|----- |
-| **Frontend** | Next.js 16 + Tailwind | Server-side rendering, professional UI | $0 |
-| **Backend** | FastAPI + Python | Fast async processing, auto API docs | $0 |
-| **Database** | SQLite | Zero-config, file-based, perfect for portfolios | $0 |
-| **AI/RAG** | Mock implementations | No API costs, easily upgradeable | $0 |
-| **Deployment** | Vercel + PythonAnywhere | Global CDN, 99.9% uptime | $0 |
-| **Total** | **Complete System** | **Production Ready** | **$0/month** |
-
----
-
-## 🎯 **Core Features**
-
-### **1. Smart Q&A Chat**
-- Natural language questions about your background
-- Intelligent responses with source citations
-- Multiple response modes (Short, Detailed, STAR format)
-- Real-time chat interface
-
-### **2. Document Management Dashboard**
-- Upload resumes, portfolios, cover letters
-- Automatic text processing and chunking
-- Skills extraction and evidence linking
-- Document status tracking
-
-### **3. Embeddable Chat Widget**
-- One-line integration: `<script src="widget.js" data-tenant="your-id"></script>`
-- Floating chat button for any website
-- Professional design with citations
-- Lightweight (~10KB) with no dependencies
-
-### **4. Skills Matrix**
-- Automatic skill detection from documents
-- Fast skill verification with evidence
-- Confidence scoring for skill claims
-- Searchable skills database
-
-### **5. Multi-Tenant System**
-- Personal account creation
-- Unique tenant IDs and API keys
-- Isolated data per user
-- Custom embed codes
-
----
-
-## 🚀 **Quick Start (5 Minutes)**
-
-### **Option A: Run Locally (Recommended)**
+### 1. Clone and Deploy
 
 ```bash
-# 1. Clone the repository
-git clone <repository-url>
+git clone https://github.com/sagarbpatel31/ProfileGPT.git
 cd ProfileGPT
-
-# 2. Start Backend (Terminal 1)
-cd backend
-python3 main.py
-# ✅ Backend running at http://localhost:8000
-
-# 3. Start Frontend (Terminal 2)
-cd frontend
-npm run dev
-# ✅ Frontend running at http://localhost:3000
+npx vercel deploy
 ```
 
-### **Option B: Docker (Alternative)**
+### 2. Set Up Database
+
+1. Create a [Supabase](https://supabase.com) project
+2. Run the SQL script in `supabase_setup.sql` in your Supabase SQL editor
+3. Get your project URL and service role key from Settings → API
+
+### 3. Configure Environment Variables
 
 ```bash
-docker-compose up -d
-# ✅ Full stack running at http://localhost:3000
+npx vercel env add NEXT_PUBLIC_SUPABASE_URL
+npx vercel env add SUPABASE_SERVICE_ROLE_KEY
+npx vercel env add OPENAI_API_KEY
 ```
 
-### **Option C: Individual Setup**
+### 4. Deploy with Environment Variables
 
-**Backend Setup:**
 ```bash
-cd backend
-pip install -r requirements.txt    # Install dependencies
-python3 main.py                   # Start development server
+npx vercel --prod
 ```
 
-**Frontend Setup:**
-```bash
-cd frontend
-npm install                       # Install dependencies
-npm run dev                      # Start development server
+## 🏗️ Architecture
+
+```
+User → Vercel CDN → Next.js Frontend → API Routes → Supabase
+                                                   ↓
+                              RAG Engine ← Vector DB + Full-text Search
+                                  ↓
+                             OpenAI LLM
 ```
 
----
+### Tech Stack
 
-## 🎮 **Using ProfileGPT**
+- **Frontend**: Next.js 16 + TypeScript + Tailwind CSS
+- **Backend**: Next.js API Routes + Python serverless functions
+- **Database**: Supabase (PostgreSQL + pgvector)
+- **AI**: OpenAI GPT-4o-mini
+- **Deployment**: Vercel
+- **Storage**: Supabase Storage
 
-### **1. Access the System**
-- **Main Interface**: http://localhost:3000
-- **User Dashboard**: http://localhost:3000/dashboard
-- **Create Account**: http://localhost:3000/signup
-- **Log In**: http://localhost:3000/login
-- **Widget Demo**: http://localhost:3000/widget-demo.html
-- **API Docs**: http://localhost:8000/docs
-
-### **2. Create Your Account**
-1. Visit http://localhost:3000/signup (or return anytime via http://localhost:3000/login)
-2. Enter your name, email, profession, and a secure password
-3. Get your unique tenant ID and embed code
-4. Access your dashboard after verifying your credentials
-
-### **3. Upload Your Documents**
-1. Go to Dashboard → Upload Documents
-2. Choose document type (Resume, Portfolio, etc.)
-3. Upload PDF, DOC, TXT, or MD files
-4. System automatically processes and chunks content
-
-### **4. Test Your ProfileGPT**
-1. Click "Test Your ProfileGPT" in dashboard
-2. Ask questions like:
-   - "What are your Python skills?"
-   - "Tell me about your experience"
-   - "What projects have you worked on?"
-
-### **5. Embed on Your Website**
-```html
-<!-- Add this single line to your website -->
-<script src="http://localhost:3000/widget.js" data-tenant="your-tenant-id"></script>
-```
-
----
-
-## 📁 **Project Structure**
+## 📁 Project Structure
 
 ```
 ProfileGPT/
-├── 🔧 backend/                    # FastAPI Backend
-│   ├── main.py                   # Main API server (RAG endpoints)
-│   ├── database.py               # SQLite database layer
-│   ├── rag_engine.py             # RAG processing engine
-│   ├── .env                      # Environment configuration
-│   ├── requirements.txt          # Python dependencies
-│   └── profilegpt.db            # SQLite database (auto-created)
-├── 🎨 frontend/                   # Next.js Frontend
-│   ├── src/app/
-│   │   ├── page.tsx              # Main chat interface + landing
-│   │   ├── signup/page.tsx       # Account creation page
-│   │   ├── login/page.tsx        # Tenant login & verification
-│   │   └── dashboard/page.tsx    # User dashboard
-│   ├── public/
-│   │   ├── widget.js            # Embeddable chat widget
-│   │   └── widget-demo.html     # Widget demonstration
-│   └── package.json             # Node.js dependencies
-├── 📚 docs/                       # Documentation
-│   ├── CLAUDE.md                # AI assistant guidelines
-│   ├── CODE_DOCUMENTATION.md    # Complete code documentation
-│   ├── DEPLOYMENT_COMPLETE.md   # Deployment status
-│   └── NEXT_STEPS_SUMMARY.md    # Implementation summary
-└── 🔧 Configuration Files
-    ├── docker-compose.yml        # Container orchestration
-    ├── .gitignore               # Version control exclusions
-    └── README.md                # This file
+├── frontend/                 # Next.js application
+│   ├── src/app/             # App router pages
+│   ├── src/components/      # React components
+│   └── public/              # Static assets
+├── api/                     # Python serverless functions
+│   ├── index.py            # Main API handler
+│   ├── supabase_database.py# Database manager
+│   └── rag_engine.py       # RAG implementation
+├── lib/                     # Shared utilities
+│   └── supabase.js         # Supabase client
+├── supabase_setup.sql      # Database schema
+└── vercel.json             # Deployment config
 ```
 
----
+## 🔧 Development
 
-## 🔌 **API Endpoints**
+### Prerequisites
 
-### **Chat & Q&A**
-- `POST /ask` - Main chat endpoint with RAG
-- `GET /skills?name=Python` - Fast skill verification
-- `GET /skills/list` - List all available skills
+- Node.js 20+
+- Python 3.9+
+- Supabase account
+- OpenAI API key
 
-### **Document Management**
-- `POST /ingest` - Upload and process documents
-- `POST /ingest/text` - Ingest raw text (handy for regression/automation)
-- `POST /ingest/url` - Scrape and ingest a public profile
-- `GET /ingest/{job_id}` - Check processing status
-- `GET /sources/{chunk_id}` - Get source content
+### Local Setup
 
-### **Account Management**
-- `POST /tenant` - Create user account
-- `GET /health` - System status check
+1. **Install dependencies**:
+   ```bash
+   cd frontend && npm install
+   cd ../api && pip install -r requirements.txt
+   ```
 
-### **API Documentation**
-Visit http://localhost:8000/docs for interactive API documentation.
+2. **Set up environment variables**:
+   ```bash
+   cp .env.example .env.local
+   # Fill in your API keys
+   ```
 
----
+3. **Start development servers**:
+   ```bash
+   # Frontend
+   cd frontend && npm run dev
 
-## 💾 **Database Schema**
+   # API (if testing locally)
+   cd api && uvicorn main:app --reload
+   ```
 
-### **Core Tables**
-```sql
-tenants          # User accounts with API keys
-documents        # Uploaded files metadata
-chunks           # Text segments with embeddings
-skills           # Skill taxonomy and synonyms
-skill_evidence   # Skill-to-evidence mappings
-queries          # Chat logs for analytics
-```
+## 🧪 Testing
 
-### **Data Flow**
-1. **Upload**: Documents → Chunks → Embeddings → Database
-2. **Query**: Question → Search → Retrieve → Generate → Cite
-3. **Skills**: Text → Extract → Link → Evidence → Confidence
-
----
-
-## 🔄 **RAG Pipeline Details**
-
-### **1. Document Ingestion**
-```
-Upload → Parse → Clean → Chunk (800 tokens) → Embed → Store → Index Skills
-```
-
-### **2. Query Processing**
-```
-Question → Search (Text + Semantic) → Rank → Context → LLM → Citations
-```
-
-### **3. Skills Matrix**
-```
-Text → NER → Keywords → Evidence → Confidence → Fast Lookup
-```
-
-### **4. Response Modes**
-- **Short**: Brief, direct answers
-- **Detailed**: Comprehensive explanations
-- **STAR**: Situation-Task-Action-Result format
-
-### **Upgrading the Model Stack**
-- `backend/rag_engine.py` now loads `sentence-transformers/all-MiniLM-L6-v2` automatically when the dependency is installed (see `backend/requirements.txt`). This produces 384-dim embeddings for far better retrieval.
-- If the library isn’t available, the engine falls back to the deterministic mock embeddings so development still works offline.
-- Provide `OPENAI_API_KEY` (and optional `OPENAI_MODEL`) to turn on the OpenAI-backed LLM for richer, more contextual answers; otherwise, it keeps using the mock heuristic model.
-- Prefer `LLM_PROVIDER=hf` to run an entirely local HuggingFace model (defaults to `google/flan-t5-base`) for a zero-cost but higher-quality option than the heuristic model.
-
----
-
-## 🎛️ **Configuration Options**
-
-### **Free Mode (Default)**
-```env
-DATABASE_URL=sqlite:///./profilegpt.db
-USE_SQLITE=true
-LLM_PROVIDER=mock  # Force heuristic responses / silence OpenAI warnings
-```
-
-### **Production Mode**
-```env
-DATABASE_URL=postgresql://user:pass@host:5432/db
-OPENAI_API_KEY=sk-real-api-key-here
-OPENAI_MODEL=gpt-4o-mini
-LLM_PROVIDER=openai
-SUPABASE_URL=https://your-project.supabase.co
-```
-
-### **Local (Free) HuggingFace Mode**
-```env
-DATABASE_URL=sqlite:///./profilegpt.db
-LLM_PROVIDER=hf
-HF_LLM_MODEL=google/flan-t5-base  # default if unset
-```
-Requires installing from `backend/requirements.txt` (already brings `transformers` + `torch` via `sentence-transformers`). This mode keeps everything on your machine and avoids API costs.
-
-### **Enable OpenAI-Powered Responses (Optional)**
-1. `cd backend && pip install -r requirements.txt` (installs the `openai` SDK).
-2. Create `.env` with `OPENAI_API_KEY=sk-your-real-key`, optionally override `OPENAI_MODEL`, `OPENAI_TEMPERATURE`, or `OPENAI_MAX_TOKENS`.
-3. Set `LLM_PROVIDER=openai` (or leave unset – the backend now auto-detects the API key).
-4. Restart the FastAPI server (`uvicorn main:app --reload`).
-
-### **Enable Local HuggingFace Responses (Free)**
-1. `cd backend && pip install -r requirements.txt` (already includes `sentence-transformers`/`transformers`).
-2. Create `.env` with `LLM_PROVIDER=hf` and optionally `HF_LLM_MODEL=google/flan-t5-base` (or any seq2seq/chat model that fits on your machine).
-3. Restart the backend server. First request will download the model; subsequent responses stay offline and free.
-
-If no provider initializes successfully the service falls back to the heuristic `MockLLM`, so local/free setups continue to work without changes.
-
-### **Deployment Variables**
-```env
-ENVIRONMENT=production
-LOG_LEVEL=INFO
-MAX_UPLOAD_SIZE=10485760
-CHUNK_SIZE=800
-CHUNK_OVERLAP=200
-```
-
----
-
-## 🚢 **Deployment Options**
-
-### **Option A: Free Hosting (CURRENTLY DEPLOYED)**
-- **Backend**: PythonAnywhere (free tier) ✅ LIVE
-- **Frontend**: Netlify (free tier) ✅ LIVE
-- **Database**: SQLite (included)
-- **Total Cost**: $0/month ✅ RUNNING
-
-### **Option B: Professional**
-- **Backend**: Railway Pro ($5/month)
-- **Frontend**: Vercel Pro ($20/month)
-- **Database**: Supabase Pro ($25/month)
-- **AI**: OpenAI API (~$10/month)
-- **Total Cost**: ~$60/month
-
-### **Option C: Self-Hosted**
-- **Infrastructure**: Your servers
-- **AI**: Local Ollama models
-- **Database**: Self-hosted PostgreSQL
-- **Total Cost**: Infrastructure only
-
----
-
-## 🔧 **Development Commands**
-
-### **Backend Development**
+### Run Test Suite
 ```bash
-cd backend
-pip install -r requirements.txt    # Install dependencies
-python3 main.py                   # Start development server
-python3 test_setup.py             # Run tests
+./test_deployment.sh
 ```
 
-### **Frontend Development**
+### Manual Testing
 ```bash
-cd frontend
-npm install                       # Install dependencies
-npm run dev                      # Start development server
-npm run build                    # Production build
-npm run lint                     # Code linting
-```
+# Test API health
+curl https://profile-gpt.vercel.app/api
 
-### **Full Stack Development**
-```bash
-docker-compose up -d             # Start all services
-docker-compose logs -f api       # View API logs
-docker-compose down              # Stop services
-```
-
-### **Regression Suite**
-```bash
-# In one terminal
-cd backend
-uvicorn main:app --reload
-
-# In another terminal
-python3 backend/tests/regression_suite.py
-```
-This seeds two synthetic tenants (embedded engineer + healthcare data scientist), ingests their sample documents, and runs a battery of `/ask` queries to spot regressions.
----
-
-## 📋 **Detailed File Explanations**
-
-### **Backend Files**
-
-#### `/backend/main.py` - **Main API Server**
-- FastAPI application with RAG endpoints
-- Handles chat requests, document uploads, tenant management
-- CORS configuration for frontend integration
-- Uses 100% free SQLite + mock models by default
-
-#### `/backend/database.py` - **Database Layer**
-- SQLite database management with full schema
-- Handles tenants, documents, chunks, skills, and queries
-- Automatic database initialization
-- Text search and skills evidence lookup
-
-#### `/backend/rag_engine.py` - **RAG Processing Engine**
-- Document ingestion and text chunking (800 tokens)
-- Mock LLM and embedding models (no API costs)
-- Skills extraction and evidence linking
-- Search ranking and answer generation with citations
-
-### **Frontend Files**
-
-#### `/frontend/src/app/page.tsx` - **Main Chat Interface**
-- Welcome landing page with feature showcase
-- Real-time chat interface with the AI
-- Citation display for source attribution
-- Multiple response modes (Short/Detailed/STAR)
-
-#### `/frontend/src/app/signup/page.tsx` - **Account Creation**
-- User registration form with validation
-- Automatic tenant ID and API key generation
-- Integration with backend tenant creation
-- Professional onboarding experience
-
-#### `/frontend/src/app/dashboard/page.tsx` - **User Dashboard**
-- Document upload interface with drag-and-drop
-- Processing status tracking and document management
-- Widget embed code generation and copying
-- Account information and quick actions
-
-#### `/frontend/public/widget.js` - **Embeddable Widget**
-- Standalone JavaScript chat widget (~10KB)
-- One-line integration for any website
-- Professional floating chat interface
-- Real-time communication with ProfileGPT API
-
----
-
-## 🧪 **Testing Your Setup**
-
-### **1. Test Backend API**
-```bash
-# Health check
-curl http://localhost:8000/health
-
-# Test chat
-curl -X POST http://localhost:8000/ask \
+# Test Q&A functionality
+curl -X POST https://profile-gpt.vercel.app/api/ask \
   -H "Content-Type: application/json" \
   -d '{"question": "What are your Python skills?"}'
-
-# Test skills lookup
-curl "http://localhost:8000/skills?name=Python"
 ```
 
-### **2. Test Frontend**
-1. Visit http://localhost:3000
-2. Click "Try Demo"
-3. Ask: "Tell me about your experience"
-4. Verify citations appear in response
+## 📊 Usage
 
-### **3. Test Widget**
-1. Visit http://localhost:3000/widget-demo.html
-2. Click chat widget in bottom-right
-3. Ask sample questions
-4. Verify responses and citations
+### Basic Q&A (Works immediately)
+- Ask about programming languages, technologies, best practices
+- Get career advice and professional guidance
+- Explain technical concepts
 
----
+### Document-Powered Responses (After setup)
+1. Upload resume/portfolio via the web interface
+2. Ask personalized questions about your experience
+3. Get cited responses with source references
 
-## 🎯 **Sample Questions to Try**
-
-**Skills & Technologies:**
+### Example Questions
 - "What programming languages do you know?"
-- "Do you have experience with React?"
-- "Tell me about your Python skills"
+- "Tell me about your machine learning experience"
+- "What projects have you worked on with Python?"
+- "Describe your experience with cloud technologies"
 
-**Experience & Background:**
-- "What's your professional background?"
-- "Describe your work experience"
-- "What projects have you built?"
+## 🔍 API Endpoints
 
-**Specific Topics:**
-- "Experience with machine learning?"
-- "Tell me about your leadership experience"
-- "What's your education background?"
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api` | GET | Service status and version |
+| `/api/ask` | POST | Ask questions (main chat endpoint) |
+| `/api/ingest` | POST | Upload and process documents |
+| `/api/documents` | GET | List uploaded documents |
+| `/api/tenant` | POST | Create user workspace |
 
----
+## 🛠️ Configuration
 
-## 🛠️ **Customization Options**
+### Environment Variables
 
-### **Modify AI Responses**
-Edit `/backend/rag_engine.py` → `MockLLM` class to customize response style.
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | Yes |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role secret | Yes |
+| `OPENAI_API_KEY` | OpenAI API key | Yes |
+| `LLM_PROVIDER` | LLM provider (openai/hf/auto) | No |
+| `EMBEDDING_MODEL` | Embedding model name | No |
 
-### **Add Document Types**
-Edit upload form in `/frontend/src/app/dashboard/page.tsx` to add new document categories.
+### Supabase Setup
 
-### **Customize Widget Design**
-Edit `/frontend/public/widget.js` to modify widget appearance and behavior.
+The `supabase_setup.sql` file creates:
+- **Tables**: tenants, documents, chunks, skills, query_logs
+- **Indexes**: Vector search optimized indexes
+- **Functions**: Hybrid search and similarity matching
+- **Security**: Row-level security policies
 
-### **Extend Database Schema**
-Modify `/backend/database.py` to add new fields or tables.
+## 🚨 Troubleshooting
 
----
+### Common Issues
 
-## 🔒 **Security & Privacy**
+1. **"Database not configured"**: Missing Supabase environment variables
+2. **"Upload error occurred"**: Check Supabase service role key
+3. **Empty responses**: Verify OpenAI API key is valid
+4. **Vector search fails**: Ensure pgvector extension is installed
 
-✅ **Data Privacy**: All data stored locally by default
-✅ **No Tracking**: No analytics or user tracking
-✅ **Secure APIs**: CORS protection and input validation
-✅ **Local First**: Can run completely offline
-✅ **Multi-Tenant**: Isolated data per user account
+### Debug Commands
+```bash
+# Check deployment logs
+npx vercel logs profile-gpt.vercel.app
 
-**For Production:**
-- Add authentication middleware
-- Implement rate limiting
-- Use HTTPS everywhere
-- Enable database encryption
-- Add API key rotation
+# Test environment variables
+npx vercel env ls
 
----
+# Check API status
+curl https://profile-gpt.vercel.app/api
+```
 
-## 📈 **Performance & Scaling**
+## 📈 Performance
 
-### **Current Performance**
-- **Response Time**: ~100ms for chat queries
-- **Document Processing**: ~5 seconds per document
-- **Concurrent Users**: 50+ (local development)
-- **Database Size**: Unlimited (SQLite scales to TB)
+- **Response Time**: ~800ms for API calls, ~3-5s for LLM responses
+- **Scalability**: Serverless auto-scaling, handles concurrent users
+- **Caching**: CDN caching for static content, API response caching
+- **Database**: Optimized indexes for vector and text search
 
-### **Scaling Options**
-- **Horizontal**: Add multiple backend instances
-- **Caching**: Redis for frequently accessed data
-- **CDN**: Cloudflare for widget distribution
-- **Database**: PostgreSQL for high concurrency
-
----
-
-## 🤝 **Contributing**
+## 🤝 Contributing
 
 1. Fork the repository
-2. Create feature branch: `git checkout -b feature-name`
-3. Make changes and test thoroughly
-4. Submit pull request with clear description
+2. Create a feature branch: `git checkout -b feature-name`
+3. Make your changes and test thoroughly
+4. Commit with conventional commits: `git commit -m "feat: add new feature"`
+5. Push and create a Pull Request
 
-### **Development Guidelines**
-- Follow TypeScript/Python best practices
-- Add tests for new features
-- Update documentation for changes
-- Maintain backward compatibility
+## 📄 License
+
+MIT License - see [LICENSE](LICENSE) file for details.
+
+## 🙋‍♂️ Support
+
+- **Documentation**: Check this README and inline code comments
+- **Issues**: [GitHub Issues](https://github.com/sagarbpatel31/ProfileGPT/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/sagarbpatel31/ProfileGPT/discussions)
+
+## 🎯 Roadmap
+
+- [ ] Multi-language support
+- [ ] Advanced analytics dashboard
+- [ ] Custom embedding models
+- [ ] Integration with LinkedIn/GitHub APIs
+- [ ] Real-time collaboration features
+- [ ] Mobile app companion
 
 ---
 
-## 📞 **Support & Resources**
-
-- **Complete Code Documentation**: `/docs/CODE_DOCUMENTATION.md`
-- **API Reference**: http://localhost:8000/docs (when running)
-- **Widget Demo**: http://localhost:3000/widget-demo.html
-- **Deployment Guide**: `/docs/DEPLOYMENT_COMPLETE.md`
-
----
-
-## 🎉 **What You Get**
-
-✅ **Complete RAG System** with intelligent Q&A
-✅ **Professional Chat Interface** with citations
-✅ **User Dashboard** for document management
-✅ **Embeddable Widget** for any website
-✅ **Multi-Tenant Architecture** for scaling
-✅ **100% Free Option** with no external dependencies
-✅ **Production Ready** with deployment configs
-✅ **Comprehensive Documentation** for everything
-
-**ProfileGPT is ready to showcase your professional experience intelligently! 🚀**
+**Built with ❤️ by [Sagar Patel](https://github.com/sagarbpatel31)**

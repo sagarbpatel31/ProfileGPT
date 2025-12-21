@@ -26,7 +26,7 @@ export default function SignupPage() {
     setIsLoading(true);
     setError('');
 
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || '/api';
     console.log('Using API URL:', apiUrl);
 
     try {

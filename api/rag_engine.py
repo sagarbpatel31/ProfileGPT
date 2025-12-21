@@ -26,7 +26,7 @@ try:
 except ImportError:
     cohere = None
 
-from database import DatabaseManager, Document, Chunk
+from supabase_database import SupabaseDatabaseManager as DatabaseManager, Document, Chunk
 
 try:
     from sentence_transformers import SentenceTransformer
