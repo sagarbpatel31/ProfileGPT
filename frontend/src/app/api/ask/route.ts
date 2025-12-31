@@ -1155,15 +1155,49 @@ export async function POST(request: NextRequest) {
     // Retrieve stored documents for the specific tenant only
     const currentTenantId = tenantId || 'demo-tenant';
 
-    // Note: Removed Railway backend connection - now using Vercel serverless functions only
+    // Retrieve documents from Supabase instead of global store
+    let documents: any[] = [];
 
-    const documentStore = (globalThis as any).documentStore || {};
-    const allDocuments = Object.values(documentStore) as any[];
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    // Filter documents by tenant to ensure isolation
-    const documents = allDocuments.filter((doc: any) =>
-      doc.tenantId === currentTenantId || (!doc.tenantId && currentTenantId === 'demo-tenant')
-    );
+    if (supabaseUrl && supabaseServiceKey) {
+      try {
+        const { createClient } = require('@supabase/supabase-js');
+        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+        // Get documents for this tenant
+        const { data: supabaseDocuments, error } = await supabase
+          .from('documents')
+          .select('*')
+          .eq('tenant_id', currentTenantId)
+          .eq('status', 'completed');
+
+        if (error) {
+          console.error('Supabase documents fetch error:', error);
+        } else if (supabaseDocuments) {
+          // Transform Supabase documents to expected format
+          documents = supabaseDocuments.map((doc: any) => ({
+            id: doc.id,
+            title: doc.title,
+            content: doc.content,
+            tenantId: doc.tenant_id,
+            source_type: doc.source_type
+          }));
+        }
+      } catch (supabaseError) {
+        console.error('Supabase connection error:', supabaseError);
+      }
+    }
+
+    // Fallback to global store if Supabase isn't available
+    if (documents.length === 0) {
+      const documentStore = (globalThis as any).documentStore || {};
+      const allDocuments = Object.values(documentStore) as any[];
+      documents = allDocuments.filter((doc: any) =>
+        doc.tenantId === currentTenantId || (!doc.tenantId && currentTenantId === 'demo-tenant')
+      );
+    }
 
     if (!process.env.OPENAI_API_KEY) {
       // Fallback response when no API key is available - provide intelligent extraction
