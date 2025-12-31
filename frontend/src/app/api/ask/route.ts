@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { getBackendBaseUrl } from '@/lib/getBackendBaseUrl';
 
 export const dynamic = 'force-dynamic';
 
@@ -1156,42 +1155,7 @@ export async function POST(request: NextRequest) {
     // Retrieve stored documents for the specific tenant only
     const currentTenantId = tenantId || 'demo-tenant';
 
-    const backendBaseUrl = getBackendBaseUrl();
-    if (backendBaseUrl) {
-      try {
-        const backendResponse = await fetch(`${backendBaseUrl}/ask`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            question,
-            tenant_id: currentTenantId,
-            mode: mode || 'detailed',
-          }),
-        });
-
-        const backendData = await backendResponse.json().catch(() => ({}));
-        if (backendResponse.ok) {
-          return NextResponse.json({
-            answer: backendData.answer || 'No answer returned from backend.',
-            sources: backendData.sources || [],
-            citations: backendData.citations || [],
-            note:
-              backendData.note ||
-              backendData.message ||
-              (backendData.context_used
-                ? `Context sections used: ${backendData.context_used}`
-                : undefined),
-            mode: backendData.mode || mode,
-          });
-        } else {
-          console.error('Backend /ask error:', backendData);
-        }
-      } catch (backendError) {
-        console.error('Backend /ask request failed, falling back to local handler:', backendError);
-      }
-    }
+    // Note: Removed Railway backend connection - now using Vercel serverless functions only
 
     const documentStore = (globalThis as any).documentStore || {};
     const allDocuments = Object.values(documentStore) as any[];

@@ -103,11 +103,11 @@ docker-compose down           # Stop services
 
 ## Deployment Options
 
-### Option A: Hosted (Recommended MVP)
-- **Frontend**: Vercel
-- **Backend**: Railway/Render/Fly.io
+### Option A: Vercel + Supabase (Current Deployment)
+- **Frontend**: Vercel (Next.js)
+- **Backend**: Vercel Serverless Functions (Python API routes)
 - **Database**: Supabase (Postgres + pgvector + Storage)
-- **LLM/Embeddings**: Hosted APIs
+- **LLM/Embeddings**: Hosted APIs (OpenAI)
 - **Observability**: Langfuse cloud
 
 ### Option B: Local/Private
